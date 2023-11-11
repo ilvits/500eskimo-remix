@@ -1,0 +1,14 @@
+{
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "driver": "PostgreSQL",
+      "name": "500eskimo",
+      "database": "500eskimo",
+      "username": "500eskimo"
+    }
+  ],
+  "sqltools.useNodeRuntime": true
+}
