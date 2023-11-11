@@ -9,7 +9,7 @@
     "start": "cross-env NODE_ENV=production node ./server.js",
     "typecheck": "tsc",
     "db:migrations": "drizzle-kit generate:pg --out ./app/db/migrations --schema ./app/db/schema.server.ts",
-    "db:push": "drizzle-kit push:pg --driver=pg  --schema=./app/db/schema.server.ts --host=localhost --port=5432 --user=500eskimo --password=5123789LviTs --database=500eskimo"
+    "db:push": "drizzle-kit push:pg --driver=pg  --schema=./app/db/schema.server.ts --host=localhost --port=5432 --user=500eskimo --password=process.env.POSTGRES_PASSWORD --database=500eskimo"
   },
   "dependencies": {
     "@remix-run/css-bundle": "^2.2.0",
