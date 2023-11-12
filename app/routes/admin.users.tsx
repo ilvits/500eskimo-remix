@@ -45,7 +45,7 @@ export default function AdminUsers() {
                 <div>{user.email}</div>
               </li>
               <li>
-                <div>{user.role.role}</div>
+                <div>{user.role.name}</div>
               </li>
               <li>
                 <div>{dayjs(user.createdAt).format("DD/MM/YYYY")}</div>
@@ -67,7 +67,7 @@ export default function AdminUsers() {
                     className='text-red-600 disabled:opacity-50'
                     type='submit'
                     disabled={
-                      user.role.role === "admin" ||
+                      user.role.name === "admin" ||
                       user.id === rootLoaderData?.userId
                     }
                   >

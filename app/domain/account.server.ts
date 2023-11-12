@@ -24,7 +24,7 @@ export const createAccount = makeDomainFunction(authSchema)(async (data) => {
 
   const newUser: NewUser = {
     ...rest,
-    roleId: 2,
+    roleId: Number(data.roleId),
     password: hashedPassword,
   };
 

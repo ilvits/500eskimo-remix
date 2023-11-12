@@ -21,6 +21,7 @@ export const loader: LoaderFunction = () => {
     username: "",
     email: "",
     password: "",
+    roleId: 2,
   };
   return json({ defaultValues });
 };
@@ -70,6 +71,7 @@ export default function SignupPage() {
             Email already exist
           </p>
         )}
+        <input type='hidden' name='roleId' value='2' />
         <div className='flex items-center space-x-4'>
           <Button type='submit' label='Register' />
           <Link

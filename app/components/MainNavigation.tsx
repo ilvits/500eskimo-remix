@@ -7,16 +7,13 @@ export default function MainNavigation() {
   // console.log("mainNav: ", user);
 
   return (
-    <div className='p-4 sticky top-0 bg-white border-b'>
+    <div className='p-4 sticky top-0 bg-emerald-600/50 backdrop-blur-md border-b'>
       <nav className='flex justify-between items-center'>
         <h1>Logo</h1>
         <ul className='flex space-x-4'>
           <li>
             <Link to='/'>Home</Link>
           </li>
-          {/* <li>
-            <Link to='/about'>About</Link>
-          </li> */}
           <li>
             <Link to='/catalog'>Catalog</Link>
           </li>

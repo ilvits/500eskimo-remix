@@ -10,11 +10,14 @@ export const authSchema = z.object({
     .string()
     .min(6, "Must contain at least 6 chars")
     .max(16, "Must contain 16 chars max"),
-  // roleId: z.number(),
+  roleId: z.coerce.number(),
 });
 
 export type RegisterAccountAuth = z.infer<typeof authSchema>;
 
-export const authSchemaWithoutUsername = authSchema.omit({ username: true });
+export const authSchemaWithoutUsername = authSchema.omit({
+  username: true,
+  roleId: true,
+});
 
 export type GetUserByEmailAuth = z.infer<typeof authSchemaWithoutUsername>;

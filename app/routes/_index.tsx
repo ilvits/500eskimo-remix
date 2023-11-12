@@ -10,5 +10,5 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
-  return <main className='p-4 h-screen'>INDEX</main>;
+  return <main className='h-screen'>INDEX</main>;
 }
