@@ -9,7 +9,7 @@ const client = new Client({
   host: "127.0.0.1",
   port: 5432,
   user: "500eskimo",
-  password: "5123789LviTs",
+  password: process.env.POSTGRES_PASSWORD,
   database: "500eskimo",
 });
 
