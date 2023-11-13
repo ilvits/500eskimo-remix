@@ -7,8 +7,8 @@ import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
 import { ValidatedForm, validationError } from "remix-validated-form";
 import { json, redirect } from "@remix-run/node";
 
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
+import { Button } from "~/ui/custom/Button";
+import { Input } from "~/ui/custom/Input";
 import type { RegisterAccountAuth } from "~/common/authSchema";
 import { authSchema } from "~/common/authSchema";
 import { createAccount } from "~/domain/account.server";

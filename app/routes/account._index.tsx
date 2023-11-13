@@ -1,5 +1,5 @@
 import type { ActionFunction } from "@remix-run/node";
-import { Button } from "~/components/Button";
+import { Button } from "~/ui/custom/Button";
 import { Form } from "@remix-run/react";
 import { authenticator } from "~/auth/authenticator.server";
 

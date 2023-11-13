@@ -1,4 +1,4 @@
-import { Input } from "~/components/Input";
+import { Input } from "~/ui/custom/Input";
 import { ValidatedForm } from "remix-validated-form";
 import { categorySchema } from "~/common/productSchema";
 import { withZod } from "@remix-validated-form/with-zod";
@@ -11,7 +11,7 @@ import {
 import { getCategory, updateCategory } from "~/services/category.server";
 import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
-import { Button } from "~/components/Button";
+import { Button } from "~/ui/custom/Button";
 
 const validator = withZod(categorySchema);
 

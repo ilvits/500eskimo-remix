@@ -1,5 +1,5 @@
-import { Input } from "~/components/Input";
-import { Select } from "~/components/Select";
+import { Input } from "~/ui/custom/Input";
+import { Select } from "~/ui/custom/Select";
 import { ValidatedForm } from "remix-validated-form";
 import { productSchema } from "~/common/productSchema";
 import { withZod } from "@remix-validated-form/with-zod";
@@ -13,7 +13,7 @@ import { getProduct, updateProduct } from "~/services/products.server";
 import { getAllCategories } from "~/services/category.server";
 import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
-import { Button } from "~/components/Button";
+import { Button } from "~/ui/custom/Button";
 
 const validator = withZod(productSchema);
 

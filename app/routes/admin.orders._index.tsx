@@ -13,24 +13,30 @@ export default function AdminMessages() {
   return (
     <div className='p-6'>
       <h1 className='text-3xl font-bold mb-4'>orders</h1>
-      <ul className='grid grid-cols-2 gap-4 p-4'>
+      <ul className='grid grid-cols-1 gap-4 p-4'>
         {orders.map((order) => (
-          <li key={order.id}>
+          <li key={order.id} className='flex flex-col space-y-2'>
             <div className='text-sm text-gray-500'>
               {dayjs(order.createdAt).format("DD MMM YYYY hh:mm")}
             </div>
             <div className='text-xl font-bold'>{order.user.username}</div>
             <div>{order.user.email}</div>
-            {order.orderItems.map((item) => (
-              <div key={item.id} className='flex'>
-                <div>
-                  <img className='w-12 h-12' src={item.product.image} alt='' />
+            <div className='grid grid-cols-4 space-y-2'>
+              {order.orderItems.map((item) => (
+                <div key={item.id} className='flex space-x-4 items-center'>
+                  <div>
+                    <img
+                      className='w-10 h-10 rounded'
+                      src={item.product.image}
+                      alt=''
+                    />
+                  </div>
+                  <div>
+                    {item.product.title} ({item.price}$) ({item.quantity} pcs.)
+                  </div>
                 </div>
-                <div>
-                  {item.product.title} ({item.price}$) ({item.quantity} pcs.)
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </li>
         ))}
       </ul>

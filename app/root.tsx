@@ -7,25 +7,32 @@ import {
   ScrollRestoration,
   useRouteError,
   useRouteLoaderData,
-} from "@remix-run/react";
-import {
-  json,
-  type LinksFunction,
-  type LoaderFunctionArgs,
-} from "@remix-run/node";
+} from '@remix-run/react';
+import { cssBundleHref } from '@remix-run/css-bundle';
 
-import MainNavigation from "./components/MainNavigation";
-import { authenticator } from "./auth/authenticator.server";
-import styles from "./styles/tailwind.css";
+import { json, type LinksFunction, type LoaderFunctionArgs } from '@remix-run/node';
 
-export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
+import { authenticator } from './auth/authenticator.server';
+import styles from './styles/tailwind.css';
+import Layout from './ui/custom/Layout';
 
+import '@fontsource/hauora-sans/200.css';
+import '@fontsource/hauora-sans/300.css';
+import '@fontsource/hauora-sans/400.css';
+import '@fontsource/hauora-sans/500.css';
+import '@fontsource/hauora-sans/600.css';
+import '@fontsource/hauora-sans/700.css';
+
+export const links: LinksFunction = () => [
+  { rel: 'stylesheet', href: styles },
+  ...(cssBundleHref ? [{ rel: 'stylesheet', href: cssBundleHref }] : []),
+];
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json(await authenticator.isAuthenticated(request));
 };
 
 export function useRootLoaderData() {
-  return useRouteLoaderData<typeof loader>("root");
+  return useRouteLoaderData<typeof loader>('root');
 }
 
 export default function App() {
@@ -37,9 +44,10 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body className='bg-slate-400'>
-        <MainNavigation />
-        <Outlet />
+      <body className='font-medium text-[#4A2502]'>
+        <Layout>
+          <Outlet />
+        </Layout>
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
@@ -59,11 +67,7 @@ export function ErrorBoundary() {
         <Links />
       </head>
       <body>
-        {error instanceof Error ? (
-          <pre>{error.message}</pre>
-        ) : (
-          <pre>{JSON.stringify(error, null, 2)}</pre>
-        )}
+        {error instanceof Error ? <pre>{error.message}</pre> : <pre>{JSON.stringify(error, null, 2)}</pre>}
         <Scripts />
       </body>
     </html>

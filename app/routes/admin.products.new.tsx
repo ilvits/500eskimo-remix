@@ -4,10 +4,10 @@ import { json, redirect, type LoaderFunction } from "@remix-run/node";
 import { ValidatedForm, validationError } from "remix-validated-form";
 import { withZod } from "@remix-validated-form/with-zod";
 import { useLoaderData } from "@remix-run/react";
-import { Input } from "~/components/Input";
+import { Input } from "~/ui/custom/Input";
 import { createProduct } from "~/services/products.server";
 import { getAllCategories } from "~/services/category.server";
-import { Select } from "~/components/Select";
+import { Select } from "~/ui/custom/Select";
 
 const validator = withZod(productSchema);
 
