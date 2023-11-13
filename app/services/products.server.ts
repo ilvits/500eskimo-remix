@@ -1,27 +1,7 @@
-import { categories, products } from "~/db/schema.server";
-
 import { db } from "~/db/config.server";
 import { eq } from "drizzle-orm";
 import invariant from "tiny-invariant";
-
-export const getAllCategories = async () => {
-  const result = await db.select().from(categories);
-  if (!result) {
-    throw new Error("Unable to get all categories");
-  }
-  return result;
-};
-
-export const getAllCategoriesWithProducts = async () => {
-  // const result = await db.select().from(users);
-  const result = await db.query.categories.findMany({
-    with: {
-      products: true,
-    },
-  });
-  invariant(result, "Unable to get all categories");
-  return result;
-};
+import { products } from "~/db/schema.server";
 
 export const getAllProducts = async () => {
   const result = await db.select().from(products);
@@ -38,8 +18,6 @@ export const getProduct = async (id: number) => {
 };
 
 export const createProduct = async (data: any) => {
-  console.log("createProduct: ", data);
-
   data.categoryId = Number(data.categoryId);
   const record = await db.insert(products).values(data).returning();
   invariant(record, "Unable to create a new product");

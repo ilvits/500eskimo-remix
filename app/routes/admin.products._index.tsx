@@ -1,6 +1,6 @@
 import { type LoaderFunctionArgs, json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
-import { getAllCategoriesWithProducts } from "~/services/products.server";
+import { getAllCategoriesWithProducts } from "~/services/category.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const categories = await getAllCategoriesWithProducts();
@@ -36,7 +36,7 @@ export default function AdminCatalog() {
                   <div>Product</div>
                 </li>
                 <li>
-                  <div>Category</div>
+                  <div>SKU</div>
                 </li>
                 <li>
                   <div>Price</div>
@@ -63,7 +63,7 @@ export default function AdminCatalog() {
                         />
                       </li>
                       <li key={product.id}>{product.title}</li>
-                      <li>{product.categoryId}</li>
+                      <li>{product.sku}</li>
                       <li>{product.price}</li>
                       <li>{product.rating}</li>
                       <li>{product.stock}</li>

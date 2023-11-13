@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteError,
   useRouteLoaderData,
 } from "@remix-run/react";
 import {
@@ -42,6 +43,28 @@ export default function App() {
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
+      </body>
+    </html>
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  console.error(error);
+  return (
+    <html>
+      <head>
+        <title>Oh no!</title>
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        {error instanceof Error ? (
+          <pre>{error.message}</pre>
+        ) : (
+          <pre>{JSON.stringify(error, null, 2)}</pre>
+        )}
+        <Scripts />
       </body>
     </html>
   );

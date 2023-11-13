@@ -9,13 +9,11 @@ import {
   type LoaderFunction,
   redirect,
 } from "@remix-run/node";
-import {
-  getAllCategories,
-  getProduct,
-  updateProduct,
-} from "~/services/products.server";
+import { getProduct, updateProduct } from "~/services/products.server";
+import { getAllCategories } from "~/services/category.server";
 import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
+import { Button } from "~/components/Button";
 
 const validator = withZod(productSchema);
 
@@ -69,12 +67,13 @@ export default function AdminProductCardEdit() {
         id='numReviews'
         label='Number of Reviews'
       />
-      <button
+      <Button
         type='submit'
+        label='Save'
         className='w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded'
       >
         Save
-      </button>
+      </Button>
     </ValidatedForm>
   );
 }

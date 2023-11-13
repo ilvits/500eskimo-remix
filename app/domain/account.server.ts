@@ -5,17 +5,15 @@ import { hash, verify } from "argon2";
 
 import { db } from "~/db/config.server";
 import { eq } from "drizzle-orm";
+import invariant from "tiny-invariant";
 
 export const createAccount = makeDomainFunction(authSchema)(async (data) => {
-  console.log("data: ", data);
   const result = await db
     .select()
     .from(users)
     .where(eq(users.email, data.email));
-  console.log("result: ", result);
 
   if (result.length > 0) {
-    console.log("result: ", result);
     throw new InputError("Email already taken", "email");
   }
 
@@ -29,12 +27,10 @@ export const createAccount = makeDomainFunction(authSchema)(async (data) => {
   };
 
   const record = await db.insert(users).values(newUser).returning();
-  console.log("record: ", record);
 
   if (!record || !record[0].id) {
     throw new Error("Unable to register a new user");
   }
-
   return record;
 });
 
@@ -61,14 +57,15 @@ export const getAccountByEmail = makeDomainFunction(authSchemaWithoutUsername)(
 
 export const getAllUsers = async () => {
   // const result = await db.select().from(users);
-  const result = await db.query.users.findMany({
-    with: {
-      role: true,
-    },
-  });
-  if (!result) {
-    throw new Error("Unable to get all users");
-  }
+  const result = await db.query.users
+    .findMany({
+      limit: 40,
+      with: {
+        role: true,
+      },
+    })
+    .then((users) => users.filter((user) => user.role.id == 2));
+  invariant(result, "Unable to get all users");
 
   return result;
 };

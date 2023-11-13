@@ -20,6 +20,9 @@ export function AdminSidebar() {
           <li>
             <Link to='./messages'>Messages</Link>
           </li>
+          <li>
+            <Link to='./categories'>Categories</Link>
+          </li>
         </ul>
       </nav>
     </div>
