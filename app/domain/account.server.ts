@@ -12,6 +12,7 @@ export const createAccount = makeDomainFunction(authSchema)(async (data) => {
     .select()
     .from(users)
     .where(eq(users.email, data.email));
+  console.log("result: ", result);
 
   if (result.length > 0) {
     console.log("result: ", result);
@@ -24,11 +25,11 @@ export const createAccount = makeDomainFunction(authSchema)(async (data) => {
 
   const newUser: NewUser = {
     ...rest,
-    roleId: Number(data.roleId),
     password: hashedPassword,
   };
 
   const record = await db.insert(users).values(newUser).returning();
+  console.log("record: ", record);
 
   if (!record || !record[0].id) {
     throw new Error("Unable to register a new user");

@@ -9,7 +9,7 @@
     "start": "cross-env NODE_ENV=production node ./server.js",
     "typecheck": "tsc",
     "db:migrations": "drizzle-kit generate:pg --out ./app/db/migrations --schema ./app/db/schema.server.ts",
-    "db:push": "drizzle-kit push:pg --driver=pg  --schema=./app/db/schema.server.ts --host=localhost --port=5432 --user=500eskimo --password=process.env.POSTGRES_PASSWORD --database=500eskimo"
+    "db:push": "drizzle-kit push:pg --driver=pg  --schema=./app/db/schema.server.ts --host=localhost --port=5432 --user=process.env.POSTGRES_PASSWORD --password=process.env.POSTGRES_PASSWORD --database=process.env.POSTGRES_PASSWORD"
   },
   "dependencies": {
     "@remix-run/css-bundle": "^2.2.0",
@@ -23,6 +23,7 @@
     "cross-env": "^7.0.3",
     "dayjs": "^1.11.10",
     "domain-functions": "^2.5.1",
+    "dotenv": "^16.3.1",
     "drizzle-orm": "^0.29.0",
     "express": "^4.18.2",
     "isbot": "^3.6.8",
@@ -52,7 +53,7 @@
     "@types/react-dom": "^18.2.7",
     "@types/source-map-support": "^0.5.6",
     "chokidar": "^3.5.3",
-    "drizzle-kit": "^0.20.1",
+    "drizzle-kit": "^0.20.2",
     "eslint": "^8.38.0",
     "tailwindcss": "^3.3.5",
     "typescript": "^5.1.6"

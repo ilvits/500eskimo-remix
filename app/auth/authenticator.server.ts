@@ -25,6 +25,7 @@ authenticator.use(
     const password = formData.get("password");
 
     const result = await getAccountByEmail({ email, password });
+    console.log(result);
 
     if (!result.success) {
       throw new Error("Failed to authenticate user");

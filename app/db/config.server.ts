@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import * as schema from "./schema.server";
 
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -6,11 +8,11 @@ import pkg from "pg";
 
 const { Client } = pkg;
 const client = new Client({
-  host: "127.0.0.1",
-  port: 5432,
-  user: "500eskimo",
+  host: process.env.POSTGRES_HOST,
+  port: process.env.POSTGRES_PORT ? parseInt(process.env.POSTGRES_PORT) : 5432,
+  user: process.env.POSTGRES_USER,
   password: process.env.POSTGRES_PASSWORD,
-  database: "500eskimo",
+  database: process.env.POSTGRES_DB,
 });
 
 client.connect();
