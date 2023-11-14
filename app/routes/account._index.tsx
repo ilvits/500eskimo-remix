@@ -1,10 +1,10 @@
-import type { ActionFunction } from "@remix-run/node";
-import { Button } from "~/ui/custom/Button";
-import { Form } from "@remix-run/react";
-import { authenticator } from "~/auth/authenticator.server";
+import type { ActionFunction } from '@remix-run/node';
+import { Button } from '~/components/ui/custom/Button';
+import { Form } from '@remix-run/react';
+import { authenticator } from '~/auth/authenticator.server';
 
 export const action: ActionFunction = async ({ request }) => {
-  await authenticator.logout(request, { redirectTo: "/auth/sign-in" });
+  await authenticator.logout(request, { redirectTo: '/auth/sign-in' });
 };
 
 export default function ProtectedMain() {

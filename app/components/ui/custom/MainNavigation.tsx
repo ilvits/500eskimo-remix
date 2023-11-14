@@ -1,13 +1,13 @@
-import { Link, useLoaderData } from "@remix-run/react";
+import { Link, NavLink, useLoaderData } from '@remix-run/react';
 
-import type { loader } from "~/root";
+import type { loader } from '~/root';
 
 export default function MainNavigation() {
   const user = useLoaderData<typeof loader>();
   // console.log("mainNav: ", user);
 
   return (
-    <div className='h-[116px] w-full px-[70px] sticky top-0 backdrop-blur-md flex justify-between items-center'>
+    <div className='h-[116px] w-full px-[70px] sticky top-0 backdrop-blur-md flex justify-between items-center z-50'>
       <img src='/static/assets/logo/logo_main.svg' alt='' />
       <nav className='flex justify-between items-center'>
         <ul className='flex space-x-4'>
@@ -42,10 +42,10 @@ export default function MainNavigation() {
                 <img src='/static/assets/icons/search.svg' alt='' />
               </Link>
               <li>
-                <Link to='/admin' className='flex space-x-2 items-center'>
+                <NavLink to='/admin' className='flex space-x-2 items-center active:bg-[#FFFBF2]'>
                   <img src='/static/assets/icons/account.svg' alt='' />
                   <div>Admin</div>
-                </Link>
+                </NavLink>
               </li>
             </div>
           )}

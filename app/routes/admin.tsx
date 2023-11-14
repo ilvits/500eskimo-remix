@@ -23,7 +23,9 @@ export default function Admin() {
   return (
     <main id='admin' className='flex flex-row'>
       <AdminSidebar />
-      <Outlet />
+      <section className='ml-[260px]'>
+        <Outlet />
+      </section>
     </main>
   );
 }

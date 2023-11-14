@@ -3,9 +3,9 @@ import { EMAIL_PASSWORD_STRATEGY, authenticator } from '~/auth/authenticator.ser
 import { Link, Links, Meta, Scripts, useLoaderData, useRouteError, useSearchParams } from '@remix-run/react';
 import { ValidatedForm, validationError } from 'remix-validated-form';
 
-import { Button } from '~/ui/custom/Button';
+import { Button } from '~/components/ui/custom/Button';
 import type { GetUserByEmailAuth } from '~/common/authSchema';
-import { Input } from '~/ui/custom/Input';
+import { Input } from '~/components/ui/custom/Input';
 import { authSchemaWithoutUsername } from '~/common/authSchema';
 import { json } from '@remix-run/node';
 import { withZod } from '@remix-validated-form/with-zod';

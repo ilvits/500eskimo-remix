@@ -14,7 +14,7 @@ import { json, type LinksFunction, type LoaderFunctionArgs } from '@remix-run/no
 
 import { authenticator } from './auth/authenticator.server';
 import styles from './styles/tailwind.css';
-import Layout from './ui/custom/Layout';
+import Layout from './components/ui/custom/Layout';
 
 import '@fontsource/hauora-sans/200.css';
 import '@fontsource/hauora-sans/300.css';

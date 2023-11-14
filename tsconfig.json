@@ -2,8 +2,8 @@
   "include": [
     "remix.env.d.ts",
     "**/*.ts",
-    "**/*.tsx",
-    "app/ui/MainNavigation.jsx"
+    "**/*.tsx"
+    // "app/ui/MainNavigation.jsx"
   ],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
