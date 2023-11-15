@@ -1,7 +1,7 @@
-import { Authenticator } from "remix-auth";
-import { FormStrategy } from "remix-auth-form";
-import { getAccountByEmail } from "~/domain/account.server";
-import { sessionStorage } from "~/auth/storage.server";
+import { Authenticator } from 'remix-auth';
+import { FormStrategy } from 'remix-auth-form';
+import { getAccountByEmail } from '~/services/account.server';
+import { sessionStorage } from '~/auth/storage.server';
 
 interface User {
   userId: number;
@@ -9,26 +9,26 @@ interface User {
   roleId: number;
 }
 
-export const EMAIL_PASSWORD_STRATEGY = "email-password-strategy";
+export const EMAIL_PASSWORD_STRATEGY = 'email-password-strategy';
 
 export const authenticator = new Authenticator<User>(sessionStorage);
 
 authenticator.use(
   new FormStrategy(async ({ context }) => {
     if (!context?.formData) {
-      throw new Error("FormData must be provided in the Context");
+      throw new Error('FormData must be provided in the Context');
     }
 
     const formData = context.formData as FormData;
 
-    const email = formData.get("email");
-    const password = formData.get("password");
+    const email = formData.get('email');
+    const password = formData.get('password');
 
     const result = await getAccountByEmail({ email, password });
     console.log(result);
 
     if (!result.success) {
-      throw new Error("Failed to authenticate user");
+      throw new Error('Failed to authenticate user');
       // return redirect("/auth/sign-in", 401);
     }
 

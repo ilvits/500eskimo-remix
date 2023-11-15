@@ -8,7 +8,7 @@ import { Button } from '~/components/ui/custom/Button';
 import { Input } from '~/components/ui/custom/Input';
 import type { RegisterAccountAuth } from '~/common/authSchema';
 import { authSchema } from '~/common/authSchema';
-import { createAccount } from '~/domain/account.server';
+import { createAccount } from '~/services/account.server';
 import { withZod } from '@remix-validated-form/with-zod';
 
 const validator = withZod(authSchema);

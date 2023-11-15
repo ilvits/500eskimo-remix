@@ -1,5 +1,5 @@
 {
-  "id": "cb9b215e-d219-49de-8231-9e7e15038014",
+  "id": "d87dc8e9-5f8f-4017-81a3-727f932d5327",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "5",
   "dialect": "pg",
@@ -164,7 +164,7 @@
         },
         "price": {
           "name": "price",
-          "type": "integer",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": true
         },
@@ -182,7 +182,43 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "order_id_idx": {
+          "name": "order_id_idx",
+          "columns": [
+            "order_id"
+          ],
+          "isUnique": false
+        },
+        "product_id_idx": {
+          "name": "product_id_idx",
+          "columns": [
+            "product_id"
+          ],
+          "isUnique": false
+        },
+        "price_idx": {
+          "name": "price_idx",
+          "columns": [
+            "price"
+          ],
+          "isUnique": false
+        },
+        "quantity_idx": {
+          "name": "quantity_idx",
+          "columns": [
+            "quantity"
+          ],
+          "isUnique": false
+        },
+        "created_at_idx": {
+          "name": "created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "order_items_order_id_orders_id_fk": {
           "name": "order_items_order_id_orders_id_fk",
@@ -236,6 +272,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "total": {
+          "name": "total",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -244,7 +286,36 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "status_idx": {
+          "name": "status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "user_id_idx": {
+          "name": "user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "total_idx": {
+          "name": "total_idx",
+          "columns": [
+            "total"
+          ],
+          "isUnique": false
+        },
+        "created_at_idx": {
+          "name": "created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "orders_user_id_users_id_fk": {
           "name": "orders_user_id_users_id_fk",
@@ -301,7 +372,7 @@
           "name": "image",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "categoryId": {
           "name": "categoryId",
@@ -342,7 +413,64 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "price_idx": {
+          "name": "price_idx",
+          "columns": [
+            "price"
+          ],
+          "isUnique": false
+        },
+        "title_idx": {
+          "name": "title_idx",
+          "columns": [
+            "title"
+          ],
+          "isUnique": false
+        },
+        "category_idx": {
+          "name": "category_idx",
+          "columns": [
+            "categoryId"
+          ],
+          "isUnique": false
+        },
+        "rating_idx": {
+          "name": "rating_idx",
+          "columns": [
+            "rating"
+          ],
+          "isUnique": false
+        },
+        "stock_idx": {
+          "name": "stock_idx",
+          "columns": [
+            "stock"
+          ],
+          "isUnique": false
+        },
+        "numReviews_idx": {
+          "name": "numReviews_idx",
+          "columns": [
+            "numReviews"
+          ],
+          "isUnique": false
+        },
+        "created_at_idx": {
+          "name": "created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "updated_at_idx": {
+          "name": "updated_at_idx",
+          "columns": [
+            "updated_at"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {

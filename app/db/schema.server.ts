@@ -1,38 +1,27 @@
-import {
-  decimal,
-  integer,
-  pgTable,
-  serial,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { decimal, index, integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
-import {
-  relations,
-  type InferSelectModel,
-  type InferInsertModel,
-} from "drizzle-orm";
+import { relations } from 'drizzle-orm';
 
-export type User = InferSelectModel<typeof users>;
-export type NewUser = InferInsertModel<typeof users>;
-export type Order = InferSelectModel<typeof orders>;
-export type OrderItem = InferSelectModel<typeof orderItems>;
+// export type User = InferSelectModel<typeof users>;
+// export type NewUser = InferInsertModel<typeof users>;
+// export type Order = InferSelectModel<typeof orders>;
+// export type OrderItem = InferSelectModel<typeof orderItems>;
 
-export const roles = pgTable("roles", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
+export const roles = pgTable('roles', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
 });
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull(),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  roleId: integer("role_id")
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  username: text('username').notNull(),
+  email: text('email').notNull().unique(),
+  password: text('password').notNull(),
+  roleId: integer('role_id')
     .notNull()
     .references(() => roles.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const usersRelations = relations(users, ({ one }) => ({
@@ -46,28 +35,43 @@ export const rolesRelations = relations(roles, ({ many }) => ({
   users: many(users),
 }));
 
-export const products = pgTable("products", {
-  id: serial("id").primaryKey(),
-  sku: text("sku").notNull().unique(),
-  title: text("title").notNull(),
-  description: text("description"),
-  price: decimal("price").notNull(),
-  image: text("image").notNull(),
-  categoryId: integer("categoryId").notNull(),
-  rating: integer("rating"),
-  stock: text("stock"),
-  numReviews: integer("numReviews"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const products = pgTable(
+  'products',
+  {
+    id: serial('id').primaryKey(),
+    sku: text('sku').notNull().unique(),
+    title: text('title').notNull(),
+    description: text('description'),
+    price: decimal('price').notNull(),
+    image: text('image').notNull(),
+    categoryId: integer('categoryId').notNull(),
+    rating: integer('rating'),
+    stock: text('stock'),
+    numReviews: integer('numReviews'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  table => {
+    return {
+      priceIdx: index('price_idx').on(table.price),
+      titleIdx: index('title_idx').on(table.title),
+      categoryIdx: index('category_idx').on(table.categoryId),
+      ratingIdx: index('rating_idx').on(table.rating),
+      stockIdx: index('stock_idx').on(table.stock),
+      numReviewsIdx: index('numReviews_idx').on(table.numReviews),
+      createdAtIdx: index('created_at_idx').on(table.createdAt),
+      updatedAtIdx: index('updated_at_idx').on(table.updatedAt),
+    };
+  }
+);
 
-export const categories = pgTable("categories", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const productsRelations = relations(products, ({ one }) => ({
@@ -81,17 +85,17 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
   products: many(products),
 }));
 
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id")
+export const messages = pgTable('messages', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
     .notNull()
     .references(() => users.id),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  subject: text("subject").notNull(),
-  phone: text("phone").notNull(),
-  body: text("body").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  subject: text('subject').notNull(),
+  phone: text('phone').notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -101,14 +105,26 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
-export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-  status: text("status").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const orders = pgTable(
+  'orders',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    status: text('status').notNull(),
+    total: decimal('total').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  table => {
+    return {
+      statusIdx: index('status_idx').on(table.status),
+      userIdIdx: index('user_id_idx').on(table.userId),
+      totalIdx: index('total_idx').on(table.total),
+      createdAtIdx: index('created_at_idx').on(table.createdAt),
+    };
+  }
+);
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   user: one(users, {
@@ -118,18 +134,30 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   orderItems: many(orderItems),
 }));
 
-export const orderItems = pgTable("order_items", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id")
-    .notNull()
-    .references(() => orders.id),
-  productId: integer("product_id")
-    .notNull()
-    .references(() => products.id),
-  price: integer("price").notNull(),
-  quantity: integer("quantity").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const orderItems = pgTable(
+  'order_items',
+  {
+    id: serial('id').primaryKey(),
+    orderId: integer('order_id')
+      .notNull()
+      .references(() => orders.id),
+    productId: integer('product_id')
+      .notNull()
+      .references(() => products.id),
+    price: decimal('price').notNull(),
+    quantity: integer('quantity').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  table => {
+    return {
+      orderIdIdx: index('order_id_idx').on(table.orderId),
+      productIdIdx: index('product_id_idx').on(table.productId),
+      priceIdx: index('price_idx').on(table.price),
+      quantityIdx: index('quantity_idx').on(table.quantity),
+      createdAtIdx: index('created_at_idx').on(table.createdAt),
+    };
+  }
+);
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   order: one(orders, {

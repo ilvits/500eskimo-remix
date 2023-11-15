@@ -1,8 +1,8 @@
-import { type LoaderFunctionArgs, json } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
-import dayjs from "dayjs";
-import { getAllUsers } from "~/domain/account.server";
-import { useRootLoaderData } from "~/root";
+import { type LoaderFunctionArgs, json } from '@remix-run/node';
+import { Form, useLoaderData } from '@remix-run/react';
+import dayjs from 'dayjs';
+import { getAllUsers } from '~/services/account.server';
+import { useRootLoaderData } from '~/root';
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const users = json(await getAllUsers());
   return users;
@@ -11,8 +11,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function AdminUsers() {
   const users = useLoaderData<typeof loader>();
   const rootLoaderData = useRootLoaderData();
-  console.log("users: ", users);
-  console.log("currentUser: ", rootLoaderData);
+  console.log('users: ', users);
+  console.log('currentUser: ', rootLoaderData);
 
   return (
     <div className='w-screen h-screen flex  justify-center p-4'>
@@ -36,7 +36,7 @@ export default function AdminUsers() {
               <div></div>
             </li>
           </ul>
-          {users.map((user) => (
+          {users.map(user => (
             <ul key={user.id} className='flex space-x-4 w-full [&>li]:w-1/5'>
               <li>
                 <div>{user.username}</div>
@@ -48,16 +48,14 @@ export default function AdminUsers() {
                 <div>{user.role.name}</div>
               </li>
               <li>
-                <div>{dayjs(user.createdAt).format("DD/MM/YYYY")}</div>
+                <div>{dayjs(user.createdAt).format('DD/MM/YYYY')}</div>
               </li>
               <li>
                 <Form
                   method='post'
-                  action={user.id + "/delete"}
-                  onSubmit={(event) => {
-                    const response = confirm(
-                      "Please confirm you want to delete this contact."
-                    );
+                  action={user.id + '/delete'}
+                  onSubmit={event => {
+                    const response = confirm('Please confirm you want to delete this contact.');
                     if (!response) {
                       event.preventDefault();
                     }
@@ -66,10 +64,7 @@ export default function AdminUsers() {
                   <button
                     className='text-red-600 disabled:opacity-50'
                     type='submit'
-                    disabled={
-                      user.role.name === "admin" ||
-                      user.id === rootLoaderData?.userId
-                    }
+                    disabled={user.role.name === 'admin' || user.id === rootLoaderData?.userId}
                   >
                     Delete
                   </button>
