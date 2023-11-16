@@ -1,4 +1,4 @@
-import { asc, between, desc, sql } from 'drizzle-orm';
+import { asc, between, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '~/db/config.server';
 import invariant from 'tiny-invariant';
@@ -7,7 +7,7 @@ import { orders } from '~/db/schema.server';
 export const getAllOrders = async () => {
   const result = await db.query.orders.findMany({
     limit: 10,
-    orderBy: [asc(orders.createdAt)],
+    // orderBy: [desc(orders.createdAt)],
     with: {
       user: {
         columns: {
@@ -16,36 +16,45 @@ export const getAllOrders = async () => {
         },
       },
       orderItems: {
+        columns: {
+          quantity: true,
+          price: true,
+        },
         with: {
           product: true,
         },
       },
     },
   });
+
   invariant(result, 'Unable to get all orders');
   return result;
 };
 
-export const getOrders = async (limit: number) => {
+export const getOrders = async (limit = 10) => {
   const result = await db.query.orders
     .findMany({
-      limit: limit || 10,
+      limit: limit,
       with: {
         user: {
           columns: {
             username: true,
-            email: true,
           },
         },
         orderItems: {
           with: {
-            product: true,
+            product: {
+              columns: {
+                image: true,
+              },
+            },
           },
         },
       },
       orderBy: [desc(orders.createdAt)],
     })
     .then(orders => orders.filter(order => order.orderItems.length > 0));
+
   invariant(result, 'Unable to get all orders');
   return result;
 };
@@ -72,12 +81,11 @@ export const getAllOrdersCount = async () => {
     })
     .from(orders);
   invariant(result, 'Unable to get total orders');
-
   return result[0].count;
 };
 
 export const getAllOrdersTotal = async () => {
-  const result = await db
+  let result = await db
     .select({
       total: sql<number>`sum(${orders.total})`,
     })
@@ -113,5 +121,53 @@ export const getOrdersByDateRange = async (startDate: Date, endDate: Date) => {
     })
     .then(orders => orders.filter(order => order.orderItems.length > 0));
   invariant(result, 'Unable to get last orders');
+  return result;
+};
+
+export const getOrdersTotalByStatus = async (status: string) => {
+  let result = await db
+    .select({
+      total: sql<number>`sum(${orders.total}) as int`,
+    })
+    .from(orders)
+    .where(eq(orders.status, status));
+  console.log(result[0].total);
+
+  invariant(result, 'Unable to get total orders');
+
+  return result[0].total;
+};
+
+export const getOrderHits = async () => {
+  const data = await db.query.products.findMany({
+    columns: {
+      title: true,
+      image: true,
+      price: true,
+    },
+    with: {
+      category: {
+        columns: {
+          name: true,
+        },
+      },
+      orderItems: {
+        columns: {
+          id: true,
+        },
+      },
+    },
+  });
+  invariant(data, 'Unable to get total orders');
+  const result = data
+    .map(product => {
+      return {
+        ...product,
+        hits: product.orderItems.length,
+      };
+    })
+    .sort((a, b) => b.hits - a.hits)
+    .slice(0, 4);
+
   return result;
 };

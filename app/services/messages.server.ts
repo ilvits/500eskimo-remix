@@ -1,11 +1,18 @@
+import { desc, sql } from 'drizzle-orm';
+
 import { db } from '~/db/config.server';
 import invariant from 'tiny-invariant';
 import { messages } from '~/db/schema.server';
-import { sql } from 'drizzle-orm';
 
 export const getAllMessages = async () => {
   const result = await db.select().from(messages).limit(10);
   invariant(result, 'Unable to get all messages');
+  return result;
+};
+
+export const getMessages = async (limit = 4) => {
+  const result = await db.select().from(messages).limit(limit).orderBy(desc(messages.createdAt));
+  invariant(result, 'Unable to get messages');
   return result;
 };
 

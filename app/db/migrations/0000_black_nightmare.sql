@@ -34,19 +34,24 @@ CREATE TABLE IF NOT EXISTS "orders" (
 	"user_id" integer NOT NULL,
 	"status" text NOT NULL,
 	"total" numeric NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL
+	"delivery_method" text NOT NULL,
+	"delivered_at" timestamp,
+	"delivered" boolean NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "products" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"categoryId" integer NOT NULL,
 	"sku" text NOT NULL,
 	"title" text NOT NULL,
 	"description" text,
 	"price" numeric NOT NULL,
 	"image" text NOT NULL,
-	"categoryId" integer NOT NULL,
 	"rating" integer,
 	"stock" text,
+	"tags" text[],
 	"numReviews" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -56,6 +61,12 @@ CREATE TABLE IF NOT EXISTS "products" (
 CREATE TABLE IF NOT EXISTS "roles" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "tags" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	CONSTRAINT "tags_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "users" (
@@ -74,10 +85,14 @@ CREATE INDEX IF NOT EXISTS "product_id_idx" ON "order_items" ("product_id");--> 
 CREATE INDEX IF NOT EXISTS "price_idx" ON "order_items" ("price");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quantity_idx" ON "order_items" ("quantity");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "created_at_idx" ON "order_items" ("created_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "status_idx" ON "orders" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "user_id_idx" ON "orders" ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "status_idx" ON "orders" ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "total_idx" ON "orders" ("total");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "delivered_idx" ON "orders" ("delivered");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "delivered_at_idx" ON "orders" ("delivered_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "delivery_method_idx" ON "orders" ("delivery_method");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "created_at_idx" ON "orders" ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "updated_at_idx" ON "orders" ("updated_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "price_idx" ON "products" ("price");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "title_idx" ON "products" ("title");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "category_idx" ON "products" ("categoryId");--> statement-breakpoint
@@ -86,6 +101,7 @@ CREATE INDEX IF NOT EXISTS "stock_idx" ON "products" ("stock");--> statement-bre
 CREATE INDEX IF NOT EXISTS "numReviews_idx" ON "products" ("numReviews");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "created_at_idx" ON "products" ("created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "updated_at_idx" ON "products" ("updated_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "tags_idx" ON "products" ("tags");--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "messages" ADD CONSTRAINT "messages_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
@@ -106,6 +122,12 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "products" ADD CONSTRAINT "products_categoryId_categories_id_fk" FOREIGN KEY ("categoryId") REFERENCES "categories"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

@@ -1,11 +1,13 @@
-import { decimal, index, integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { type InferInsertModel, type InferSelectModel, relations, sql } from 'drizzle-orm';
+import { boolean, decimal, index, integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
-import { relations } from 'drizzle-orm';
-
-// export type User = InferSelectModel<typeof users>;
-// export type NewUser = InferInsertModel<typeof users>;
-// export type Order = InferSelectModel<typeof orders>;
-// export type OrderItem = InferSelectModel<typeof orderItems>;
+export type User = InferSelectModel<typeof users>;
+export type NewUser = InferInsertModel<typeof users>;
+export type Role = InferSelectModel<typeof roles>;
+export type Product = InferSelectModel<typeof products>;
+export type Category = InferSelectModel<typeof categories>;
+export type Order = InferSelectModel<typeof orders>;
+export type OrderItem = InferSelectModel<typeof orderItems>;
 
 export const roles = pgTable('roles', {
   id: serial('id').primaryKey(),
@@ -39,14 +41,17 @@ export const products = pgTable(
   'products',
   {
     id: serial('id').primaryKey(),
+    categoryId: integer('categoryId')
+      .notNull()
+      .references(() => categories.id),
     sku: text('sku').notNull().unique(),
     title: text('title').notNull(),
     description: text('description'),
     price: decimal('price').notNull(),
     image: text('image').notNull(),
-    categoryId: integer('categoryId').notNull(),
     rating: integer('rating'),
     stock: text('stock'),
+    tags: text('tags').array(),
     numReviews: integer('numReviews'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -61,6 +66,7 @@ export const products = pgTable(
       numReviewsIdx: index('numReviews_idx').on(table.numReviews),
       createdAtIdx: index('created_at_idx').on(table.createdAt),
       updatedAtIdx: index('updated_at_idx').on(table.updatedAt),
+      tagsIdx: index('tags_idx').on(table.tags).using(sql.raw(`USING gin (tags)`)),
     };
   }
 );
@@ -74,11 +80,22 @@ export const categories = pgTable('categories', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const productsRelations = relations(products, ({ one }) => ({
+export const tags = pgTable('tags', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+});
+
+export const productsRelations = relations(products, ({ one, many }) => ({
   category: one(categories, {
     fields: [products.categoryId],
     references: [categories.id],
   }),
+  orderItems: many(orderItems),
+  tags: many(tags),
+}));
+
+export const tagsRelations = relations(tags, ({ many }) => ({
+  products: many(products),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -114,14 +131,24 @@ export const orders = pgTable(
       .references(() => users.id),
     status: text('status').notNull(),
     total: decimal('total').notNull(),
+    deliveryMethod: text('delivery_method').notNull(),
+    deliveredAt: timestamp('delivered_at'),
+    delivered: boolean('delivered')
+      .$default(() => false)
+      .notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   table => {
     return {
-      statusIdx: index('status_idx').on(table.status),
       userIdIdx: index('user_id_idx').on(table.userId),
+      statusIdx: index('status_idx').on(table.status),
       totalIdx: index('total_idx').on(table.total),
+      deliveredIdx: index('delivered_idx').on(table.delivered),
+      deliveredAtIdx: index('delivered_at_idx').on(table.deliveredAt),
+      deliveryMethodIdx: index('delivery_method_idx').on(table.deliveryMethod),
       createdAtIdx: index('created_at_idx').on(table.createdAt),
+      updatedAtIdx: index('updated_at_idx').on(table.updatedAt),
     };
   }
 );
