@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs } from '@remix-run/node';
-import { deleteUser } from '~/services/account.server';
+import { deleteUser } from 'services_old/account.server';
 import invariant from 'tiny-invariant';
 import { redirect } from '@remix-run/node';
 

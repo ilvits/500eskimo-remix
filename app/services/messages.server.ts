@@ -1,28 +1,13 @@
-import { desc, sql } from 'drizzle-orm';
+import { prisma } from '~/lib/prisma.server';
 
-import { db } from '~/db/config.server';
-import invariant from 'tiny-invariant';
-import { messages } from '~/db/schema.server';
-
-export const getAllMessages = async () => {
-  const result = await db.select().from(messages).limit(10);
-  invariant(result, 'Unable to get all messages');
+export const getMessagesCount = async () => {
+  const result = await prisma.messages.count();
   return result;
 };
 
-export const getMessages = async (limit = 4) => {
-  const result = await db.select().from(messages).limit(limit).orderBy(desc(messages.createdAt));
-  invariant(result, 'Unable to get messages');
+export const getMessages = async (take = 10) => {
+  const result = await prisma.messages.findMany({
+    take,
+  });
   return result;
-};
-
-export const totalMessages = async () => {
-  const result = await db
-    .select({
-      count: sql<number>`cast(count(${messages.id}) as int)`,
-    })
-    .from(messages);
-  invariant(result, 'Unable to get total messages');
-
-  return result[0].count;
 };

@@ -47,10 +47,10 @@ export default function App() {
       <body className='font-medium text-[#4A2502]'>
         <Layout>
           <Outlet />
+          <ScrollRestoration />
+          <Scripts />
+          <LiveReload />
         </Layout>
-        <ScrollRestoration />
-        <Scripts />
-        <LiveReload />
       </body>
     </html>
   );

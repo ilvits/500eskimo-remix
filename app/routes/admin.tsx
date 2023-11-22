@@ -4,7 +4,9 @@ import { AdminSidebar } from '~/features/admin/AdminSidebar';
 import { Outlet } from '@remix-run/react';
 import { authenticator } from '~/auth/authenticator.server';
 import { getAllOrdersCount } from '~/services/orders.server';
-import { totalMessages } from '~/services/messages.server';
+import { getMessagesCount } from '~/services/messages.server';
+// import { getAllOrdersCount } from '~/services/orders.server';
+// import { totalMessages } from '~/services/messages.server';
 
 export const meta: MetaFunction = () => {
   return [{ title: 'Admin Pages' }];
@@ -15,11 +17,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     failureRedirect: '/auth/sign-in',
   });
   const ordersCount = await getAllOrdersCount();
-  const messagesCount = await totalMessages();
+  console.log('ordersCount: ', ordersCount);
+
+  const messagesCount = await getMessagesCount();
+  console.log('messagesCount: ', messagesCount);
   return { ordersCount, messagesCount };
 };
 
-export default function Admin() {
+export default function ProtectedLayout() {
   return (
     <main id='admin' className='flex flex-row'>
       <AdminSidebar />

@@ -5,9 +5,8 @@ import { ValidatedForm, validationError } from 'remix-validated-form';
 import { withZod } from '@remix-validated-form/with-zod';
 import { useLoaderData } from '@remix-run/react';
 import { Input } from '~/components/ui/custom/Input';
-import { createProduct } from '~/services/products.server';
-import { getAllCategories } from '~/services/category.server';
 import { Select } from '~/components/ui/custom/Select';
+import { createProduct, getAllCategories, getAllTags } from '~/services/products.server';
 
 const validator = withZod(productSchema);
 
@@ -18,18 +17,19 @@ export const loader: LoaderFunction = async () => {
     description: '',
     price: 0,
     image: '',
-    rating: '',
+    rating: 0,
     stock: 0,
     numReviews: 0,
     categoryId: 2,
   };
 
   const categories = await getAllCategories();
-  return json({ defaultValues, categories });
+  const tags = await getAllTags();
+  return json({ defaultValues, categories, tags });
 };
 
 export default function AddNewProduct() {
-  const { defaultValues, categories } = useLoaderData<typeof loader>();
+  const { defaultValues, categories, tags } = useLoaderData<typeof loader>();
   // console.log("categories: ", categories);
 
   return (
@@ -42,9 +42,11 @@ export default function AddNewProduct() {
         <Input type='text' name='description' id='description' label='Description' />
         <Input type='number' name='price' id='price' label='Price' />
         <Input type='text' name='image' id='image' label='Image' />
-        <Input type='text' name='rating' id='rating' label='Rating' />
-        <Input type='text' name='stock' id='stock' label='Stock' />
-        <Input type='text' name='numReviews' id='numReviews' label='Num Reviews' />
+        <Input type='number' name='rating' id='rating' label='Rating' />
+        <Input type='number' name='stock' id='stock' label='Stock' />
+        <Input type='number' name='numReviews' id='numReviews' label='Num Reviews' />
+        <input type='hidden' name='tagIds' id='tagIds' value='1' />
+        {/* <Select name='tagIds' id='tagIds' label='Tags' options={tags}></Select> */}
 
         <button type='submit'>Add Product</button>
       </ValidatedForm>
@@ -60,7 +62,7 @@ export const action = async ({ request }: { request: Request }) => {
   if (fieldValues.error) return validationError(fieldValues.error);
 
   const result = await createProduct(fieldValues.data);
-
+  console.log('result: ', result);
   if (!result) throw new Error('Something went wrong');
 
   return redirect('/admin/products');

@@ -1,22 +1,24 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const categorySchema = z.object({
-  name: z.string().min(3, "Must contain at least 3 chars"),
+  name: z.string().min(3, 'Must contain at least 3 chars'),
   description: z.string(),
 });
 
 export type AddCategory = z.infer<typeof categorySchema>;
 
 export const productSchema = z.object({
-  sku: z.string().min(12, "Must contain at least 12 chars"),
+  sku: z.string().min(12, 'Must contain at least 12 chars'),
   title: z.string(),
   description: z.string(),
   price: z.coerce.number(),
   image: z.string(),
-  rating: z.string(),
+  rating: z.coerce.number(),
   stock: z.coerce.number(),
   numReviews: z.coerce.number(),
   categoryId: z.coerce.number(),
+  ProductStatus: z.enum(['published', 'draft', 'unpublished']).default('published').optional(),
+  // tagIds: z.array(z.coerce.number()),
 });
 
 export type AddProduct = z.infer<typeof productSchema>;

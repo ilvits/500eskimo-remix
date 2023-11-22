@@ -20,10 +20,6 @@ export default function AdminDashboard() {
   const { orders, totalEarned, ordersTotals, ordersTotalsCompleted, ordersTotalsActive, orderHits, messages } =
     useLoaderData<typeof loader>();
   const range = (searchParams.get('chart') as ManipulateType) || 'week';
-  // console.log('totalEarned: ', totalEarned);
-  // console.log('ordersTotalsCompleted: ', ordersTotalsCompleted);
-  // console.log('activeOrdersEarned: ', ordersTotalsActive);
-  console.log('orderHits: ', orderHits);
 
   let format = 'MMM';
   switch (range) {
@@ -53,8 +49,6 @@ export default function AdminDashboard() {
       }, 0),
     });
   }
-
-  // console.log('total(dl): ', totalArray);
   const fetcher = useFetcher();
   const setRange = (newRange: string) => {
     range !== newRange && fetcher.submit({ chart: newRange }, { method: 'post' });
@@ -168,7 +162,7 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
-        <section id='last_orders' className='w-full rounded-t-xl border border-[#F8E9CC]'>
+        <section id='products' className='w-full rounded-t-xl border border-[#F8E9CC]'>
           <Table>
             <TableHeader>
               <TableRow className='hover:bg-[#FFFBF2] bg-[#FFFBF2] [&>th]:text-[#A59280] [&>th]:font-semibold border-[#F8E9CC]'>
@@ -188,12 +182,12 @@ export default function AdminDashboard() {
                     <div className='flex flex-row space-x-2 items-center'>
                       <div
                         className={`${
-                          order.status === 'delivered' || order.status === 'completed'
+                          order.status === 'closed'
                             ? 'bg-green-500'
                             : order.status === 'delivering' ||
                               order.status === 'processing' ||
                               order.status === 'pending' ||
-                              order.status === 'payment received'
+                              order.status === 'waiting payment'
                             ? 'bg-yellow-500'
                             : 'bg-red-500'
                         } w-2 h-2 rounded-full shrink-0`}
@@ -202,23 +196,23 @@ export default function AdminDashboard() {
                     </div>
                   </TableCell>
                   <TableCell className='flex -space-x-1 overflow-hidden min-w-fit max-w-fit'>
-                    {order.orderItems.slice(0, 2).map(item => (
+                    {order.OrderItems.slice(0, 2).map(item => (
                       <div key={item.id}>
                         <img className='w-10 h-10 rounded-md ring-[3px] ring-white' src={item.product.image} alt='' />
                       </div>
                     ))}
-                    {order.orderItems.length >= 3 &&
-                      (order.orderItems.length === 3 ? (
-                        <div key={order.orderItems[2].id}>
+                    {order.OrderItems.length >= 3 &&
+                      (order.OrderItems.length === 3 ? (
+                        <div key={order.OrderItems[2].id}>
                           <img
                             className='w-10 h-10 rounded-md ring-[3px] ring-white'
-                            src={order.orderItems[2].product.image}
+                            src={order.OrderItems[2].product.image}
                             alt=''
                           />
                         </div>
                       ) : (
                         <div className='flex justify-center items-center w-10 h-10 rounded-md ring-[3px] ring-white bg-[#F0D399]'>
-                          +{order.orderItems.length - 2}
+                          +{order.OrderItems.length - 2}
                         </div>
                       ))}
                   </TableCell>
@@ -251,7 +245,7 @@ export default function AdminDashboard() {
                 <div className='flex flex-row space-x-4 items-center'>
                   <img className='w-12 h-12 rounded-sm' src={product.image} alt='' />
                   <div className='flex flex-col grow'>
-                    <div className='text-xs font-normal  text-[#A59280]'>{product.category.name}</div>
+                    <div className='text-xs font-normal  text-[#A59280]'>{product.category?.name}</div>
                     <div className='text-sm font-semibold flex flex-row space-x-1 items-center'>
                       {product.title.charAt(0).toUpperCase() + product.title.slice(1)}
                     </div>
@@ -269,7 +263,7 @@ export default function AdminDashboard() {
                         value={product.price}
                       />
                     </div>
-                    <div>x {product.hits}</div>
+                    <div>x {product._count.OrderItems}</div>
                   </div>
                 </div>
               </CardContent>

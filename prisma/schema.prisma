@@ -1,0 +1,148 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ProductStatus {
+  published
+  hidden
+  draft
+  archived
+}
+
+model Users {
+  id        Int      @id @default(autoincrement())
+  role      Role     @default(USER)
+  username  String?
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@index([username], map: "username_idx")
+}
+
+model Customers {
+  id        Int        @id @default(autoincrement())
+  role      Role       @default(USER)
+  username  String?
+  email     String     @unique
+  password  String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now())
+  Orders    Orders[]
+  Messages  Messages[]
+
+  @@index([username], map: "customer_username_idx")
+}
+
+model Categories {
+  id          Int        @id @default(autoincrement())
+  name        String
+  slug        String
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now())
+  Products    Products[]
+}
+
+model Products {
+  id            Int           @id @default(autoincrement())
+  title         String
+  slug          String        @unique
+  productStatus ProductStatus @default(draft)
+  categoryId    Int
+  category      Categories    @relation(fields: [categoryId], references: [id])
+  tagIds        String[]
+  tags          String[]
+  sku           String
+  description   String?
+  price         Decimal
+  image         String
+  rating        Int
+  stock         Int
+  numReviews    Int
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
+  OrderItems    OrderItems[]
+
+  @@index([title], map: "title_idx")
+  @@index([tagIds], map: "tagIds_idx", type: Gin)
+  @@index([categoryId], map: "category_id_idx")
+  @@index([price], map: "price_idx")
+  @@index([stock], map: "stock_idx")
+  @@index([rating], map: "rating_idx")
+  @@index([numReviews], map: "num_reviews_idx")
+  @@index([updatedAt], map: "updated_at_idx")
+}
+
+model Tags {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  slug       String   @unique
+  color      String
+  productIds String[]
+}
+
+model Orders {
+  id             Int          @id @default(autoincrement())
+  userId         Int
+  status         String
+  total          Decimal
+  deliveryMethod String
+  deliveredAt    DateTime
+  delivered      Boolean
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now())
+  OrderItems     OrderItems[]
+  Customers      Customers?   @relation(fields: [customersId], references: [id])
+  customersId    Int?
+
+  @@index([status], map: "status_idx")
+  @@index([total], map: "total_idx")
+  @@index([userId], map: "user_id_idx")
+  @@index([deliveredAt], map: "delivered_at_idx")
+  @@index([delivered], map: "delivered_idx")
+  @@index([deliveryMethod], map: "delivery_method_idx")
+  @@index([createdAt], map: "created_at_idx")
+}
+
+model OrderItems {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  order     Orders   @relation(fields: [orderId], references: [id])
+  product   Products @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal
+  createdAt DateTime @default(now())
+
+  @@index([orderId], map: "order_id_idx")
+  @@index([productId], map: "product_id_idx")
+  @@index([quantity], map: "quantity_idx")
+}
+
+model Messages {
+  id          Int        @id @default(autoincrement())
+  userId      Int
+  name        String
+  email       String
+  subject     String
+  phone       String
+  body        String
+  createdAt   DateTime   @default(now())
+  Customers   Customers? @relation(fields: [customersId], references: [id])
+  customersId Int?
+}

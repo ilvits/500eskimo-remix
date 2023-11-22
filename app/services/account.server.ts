@@ -1,84 +1,78 @@
-import { InputError, makeDomainFunction } from "domain-functions";
-import { type NewUser, users } from "~/db/schema.server";
-import { authSchema, authSchemaWithoutUsername } from "~/common/authSchema";
-import { hash, verify } from "argon2";
+import { InputError, makeDomainFunction } from 'domain-functions';
+import { authSchema, authSchemaWithoutUsername } from '~/common/authSchema';
+import { hash, verify } from 'argon2';
 
-import { db } from "~/db/config.server";
-import { eq } from "drizzle-orm";
-import invariant from "tiny-invariant";
+import invariant from 'tiny-invariant';
+import { prisma } from '~/lib/prisma.server';
 
-export const createAccount = makeDomainFunction(authSchema)(async (data) => {
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, data.email));
+export const createAccount = makeDomainFunction(authSchema)(async data => {
+  const result = await prisma.users.findFirst({
+    where: {
+      email: data.email,
+    },
+  });
 
-  if (result.length > 0) {
-    throw new InputError("Email already taken", "email");
+  if (result) {
+    throw new InputError('Email already taken', 'email');
   }
 
-  const { password, ...rest } = data;
+  const record = await prisma.users.create({
+    data: {
+      username: data.username,
+      email: data.email,
+      password: await hash(data.password),
+    },
+    select: {
+      id: true,
+    },
+  });
 
-  const hashedPassword = await hash(password);
-
-  const newUser: NewUser = {
-    ...rest,
-    password: hashedPassword,
-  };
-
-  const record = await db.insert(users).values(newUser).returning();
-
-  if (!record || !record[0].id) {
-    throw new Error("Unable to register a new user");
-  }
+  invariant(record, 'Unable to register a new user');
   return record;
 });
 
-export const getAccountByEmail = makeDomainFunction(authSchemaWithoutUsername)(
-  async (data) => {
-    const result = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, data.email));
-
-    if (!result || !result[0].email) {
-      throw new InputError("Email does not exist", "email");
-    }
-
-    const isValidPassword = await verify(result[0].password, data.password);
-
-    if (!isValidPassword) {
-      throw new InputError("Password is not valid", "password");
-    }
-
-    return result;
+export const getAccountByEmail = makeDomainFunction(authSchemaWithoutUsername)(async data => {
+  const result = await prisma.users.findFirst({
+    where: {
+      email: data.email,
+    },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      password: true,
+      role: true,
+    },
+  });
+  if (!result || !result.email) {
+    throw new InputError('Email does not exist', 'email');
   }
-);
+
+  const isValidPassword = await verify(result.password, data.password);
+
+  if (!isValidPassword) {
+    throw new InputError('Password is not valid', 'password');
+  }
+
+  return result;
+});
 
 export const getAllUsers = async () => {
-  // const result = await db.select().from(users);
-  const result = await db.query.users
-    .findMany({
-      limit: 40,
-      with: {
-        role: true,
-      },
-    })
-    .then((users) => users.filter((user) => user.role.id == 2));
-  invariant(result, "Unable to get all users");
-
+  const result = await prisma.users.findMany();
   return result;
 };
 
 export const deleteUser = async (id: number) => {
-  console.log("deleteAccount: ", id);
+  const deletedUserId: { id: number } = await prisma.users.delete({
+    where: {
+      id,
+    },
+    select: {
+      id: true,
+    },
+  });
 
-  const deletedUserIds: { deletedId: number }[] = await db
-    .delete(users)
-    .where(eq(users.id, id))
-    .returning({ deletedId: users.id });
+  console.log('deletedUser: ', deletedUserId);
 
-  console.log("deletedUser: ", deletedUserIds);
-
-  return deletedUserIds;
+  return deletedUserId;
 };

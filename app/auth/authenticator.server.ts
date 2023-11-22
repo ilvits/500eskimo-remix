@@ -1,12 +1,14 @@
 import { Authenticator } from 'remix-auth';
 import { FormStrategy } from 'remix-auth-form';
-import { getAccountByEmail } from '~/services/account.server';
+
 import { sessionStorage } from '~/auth/storage.server';
+import { getAccountByEmail } from '~/services/account.server';
 
 interface User {
   userId: number;
   username: string;
-  roleId: number;
+  email: string;
+  role: string;
 }
 
 export const EMAIL_PASSWORD_STRATEGY = 'email-password-strategy';
@@ -25,16 +27,15 @@ authenticator.use(
     const password = formData.get('password');
 
     const result = await getAccountByEmail({ email, password });
-    console.log(result);
 
     if (!result.success) {
       throw new Error('Failed to authenticate user');
       // return redirect("/auth/sign-in", 401);
     }
 
-    const { username, roleId, id } = result.data[0];
+    const { id, username, role } = result.data;
 
-    return { username, roleId, userId: id };
+    return { userId: id, username, role };
   }),
   EMAIL_PASSWORD_STRATEGY
 );

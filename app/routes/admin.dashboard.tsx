@@ -1,5 +1,9 @@
-import { type ActionFunctionArgs, type LoaderFunctionArgs, redirect } from '@remix-run/node';
+import { type ActionFunctionArgs, type LoaderFunctionArgs, redirect, json } from '@remix-run/node';
+
 import dayjs, { type ManipulateType } from 'dayjs';
+
+import AdminDashboard from '~/features/admin/DashboardLayout';
+import { getMessages } from '~/services/messages.server';
 import {
   getAllOrdersOnlyTotalsByDateRange,
   getAllOrdersTotal,
@@ -7,10 +11,6 @@ import {
   getOrders,
   getOrdersTotalByStatus,
 } from '~/services/orders.server';
-
-import AdminDashboard from '~/features/admin/DashboardLayout';
-import invariant from 'tiny-invariant';
-import { getMessages } from '~/services/messages.server';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // await new Promise(resolve => setTimeout(resolve, 1000));
@@ -22,21 +22,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
     .toDate();
 
   const orders = await getOrders();
-  const ordersTotals = await getAllOrdersOnlyTotalsByDateRange(startDate, endDate);
   const totalEarned = await getAllOrdersTotal();
-  const ordersTotalsCompleted = await getOrdersTotalByStatus('completed');
+  const ordersTotals = await getAllOrdersOnlyTotalsByDateRange(startDate, endDate);
+
+  const ordersTotalsCompleted = await getOrdersTotalByStatus('closed');
   const ordersTotalsActive = await getOrdersTotalByStatus('processing');
   const orderHits = await getOrderHits();
-  const messages = await getMessages();
-  invariant(orders, 'orders not found');
-  invariant(totalEarned, 'total not found');
-  invariant(ordersTotals, 'ordersTotals not found');
-  invariant(ordersTotalsActive, 'ordersTotalsActive not found');
-  invariant(ordersTotalsCompleted, 'ordersTotalsCompleted not found');
-  invariant(orderHits, 'orderHits not found');
-  invariant(messages, 'messages not found');
+  const messages = await getMessages(4);
 
-  return {
+  return json({
     orders,
     totalEarned,
     ordersTotalsCompleted,
@@ -44,7 +38,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     ordersTotalsActive,
     orderHits,
     messages,
-  };
+  });
 }
 export default function Dashboard() {
   return (

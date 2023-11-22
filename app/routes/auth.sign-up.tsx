@@ -8,8 +8,9 @@ import { Button } from '~/components/ui/custom/Button';
 import { Input } from '~/components/ui/custom/Input';
 import type { RegisterAccountAuth } from '~/common/authSchema';
 import { authSchema } from '~/common/authSchema';
-import { createAccount } from '~/services/account.server';
+
 import { withZod } from '@remix-validated-form/with-zod';
+import { createAccount } from '~/services/account.server';
 
 const validator = withZod(authSchema);
 
@@ -18,7 +19,6 @@ export const loader: LoaderFunction = () => {
     username: '',
     email: '',
     password: '',
-    roleId: 2,
   };
   return json({ defaultValues });
 };
@@ -50,7 +50,6 @@ export default function SignupPage() {
         <Input name='email' label='Email' placeholder='Your email...' />
         <Input name='password' label='Password' type='password' placeholder='Your password...' />
         {error.get('error') && <p className='text-sm text-red-600 dark:text-red-500'>Email already exist</p>}
-        <input type='hidden' name='roleId' value={2} />
         <div className='flex items-center space-x-4'>
           <Button type='submit' label='Register' />
           <Link to={'/auth/sign-in'} className='font-medium text-blue-600 dark:text-blue-500 hover:underline'>

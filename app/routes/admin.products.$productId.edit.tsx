@@ -4,8 +4,6 @@ import { ValidatedForm } from 'remix-validated-form';
 import { productSchema } from '~/common/productSchema';
 import { withZod } from '@remix-validated-form/with-zod';
 import { json, type LoaderFunctionArgs, type LoaderFunction, redirect } from '@remix-run/node';
-import { getProduct, updateProduct } from '~/services/products.server';
-import { getAllCategories } from '~/services/category.server';
 import { useLoaderData } from '@remix-run/react';
 import invariant from 'tiny-invariant';
 import { Button } from '~/components/ui/custom/Button';
