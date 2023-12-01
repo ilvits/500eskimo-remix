@@ -18,6 +18,19 @@ CREATE TABLE "Users" (
 );
 
 -- CreateTable
+CREATE TABLE "Customers" (
+    "id" SERIAL NOT NULL,
+    "role" "Role" NOT NULL DEFAULT 'USER',
+    "username" TEXT,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Customers_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Categories" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
@@ -30,36 +43,69 @@ CREATE TABLE "Categories" (
 );
 
 -- CreateTable
+CREATE TABLE "Tags" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "color" TEXT NOT NULL,
+
+    CONSTRAINT "Tags_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Products" (
     "id" SERIAL NOT NULL,
+    "tagIds" TEXT[],
+    "tags" TEXT[],
     "title" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "status" "ProductStatus" NOT NULL DEFAULT 'draft',
     "categoryId" INTEGER NOT NULL,
-    "categoryName" TEXT NOT NULL,
-    "tagIds" TEXT[],
-    "tagNames" TEXT[],
-    "sku" TEXT NOT NULL,
     "description" TEXT,
-    "price" DECIMAL(65,30) NOT NULL,
     "image" TEXT NOT NULL,
     "rating" INTEGER NOT NULL,
-    "stock" INTEGER NOT NULL,
     "numReviews" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "productStatus" "ProductStatus" NOT NULL DEFAULT 'draft',
 
     CONSTRAINT "Products_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Tags" (
+CREATE TABLE "ProductVariants" (
+    "id" SERIAL NOT NULL,
+    "sku" TEXT NOT NULL,
+    "price" DECIMAL(65,30) NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "productId" INTEGER NOT NULL,
+    "optionValueId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ProductVariants_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Options" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "productIds" TEXT[],
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "Tags_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Options_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OptionValues" (
+    "id" SERIAL NOT NULL,
+    "optionId" INTEGER NOT NULL,
+    "value" TEXT NOT NULL,
+    "unit" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "OptionValues_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -73,6 +119,7 @@ CREATE TABLE "Orders" (
     "delivered" BOOLEAN NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "customersId" INTEGER,
 
     CONSTRAINT "Orders_pkey" PRIMARY KEY ("id")
 );
@@ -99,14 +146,9 @@ CREATE TABLE "Messages" (
     "phone" TEXT NOT NULL,
     "body" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "customersId" INTEGER,
 
     CONSTRAINT "Messages_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "_ProductsToTags" (
-    "A" INTEGER NOT NULL,
-    "B" INTEGER NOT NULL
 );
 
 -- CreateIndex
@@ -116,37 +158,19 @@ CREATE UNIQUE INDEX "Users_email_key" ON "Users"("email");
 CREATE INDEX "username_idx" ON "Users"("username");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Products_slug_key" ON "Products"("slug");
+CREATE UNIQUE INDEX "Customers_email_key" ON "Customers"("email");
 
 -- CreateIndex
-CREATE INDEX "title_idx" ON "Products"("title");
-
--- CreateIndex
-CREATE INDEX "tagIds_idx" ON "Products" USING GIN ("tagIds");
-
--- CreateIndex
-CREATE INDEX "category_id_idx" ON "Products"("categoryId");
-
--- CreateIndex
-CREATE INDEX "price_idx" ON "Products"("price");
-
--- CreateIndex
-CREATE INDEX "stock_idx" ON "Products"("stock");
-
--- CreateIndex
-CREATE INDEX "rating_idx" ON "Products"("rating");
-
--- CreateIndex
-CREATE INDEX "num_reviews_idx" ON "Products"("numReviews");
-
--- CreateIndex
-CREATE INDEX "updated_at_idx" ON "Products"("updatedAt");
+CREATE INDEX "customer_username_idx" ON "Customers"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Tags_name_key" ON "Tags"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Tags_slug_key" ON "Tags"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Products_slug_key" ON "Products"("slug");
 
 -- CreateIndex
 CREATE INDEX "status_idx" ON "Orders"("status");
@@ -178,29 +202,23 @@ CREATE INDEX "product_id_idx" ON "OrderItems"("productId");
 -- CreateIndex
 CREATE INDEX "quantity_idx" ON "OrderItems"("quantity");
 
--- CreateIndex
-CREATE UNIQUE INDEX "_ProductsToTags_AB_unique" ON "_ProductsToTags"("A", "B");
-
--- CreateIndex
-CREATE INDEX "_ProductsToTags_B_index" ON "_ProductsToTags"("B");
-
 -- AddForeignKey
 ALTER TABLE "Products" ADD CONSTRAINT "Products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Orders" ADD CONSTRAINT "Orders_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ProductVariants" ADD CONSTRAINT "ProductVariants_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProductVariants" ADD CONSTRAINT "ProductVariants_optionValueId_fkey" FOREIGN KEY ("optionValueId") REFERENCES "OptionValues"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OptionValues" ADD CONSTRAINT "OptionValues_optionId_fkey" FOREIGN KEY ("optionId") REFERENCES "Options"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Orders" ADD CONSTRAINT "Orders_customersId_fkey" FOREIGN KEY ("customersId") REFERENCES "Customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OrderItems" ADD CONSTRAINT "OrderItems_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OrderItems" ADD CONSTRAINT "OrderItems_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Messages" ADD CONSTRAINT "Messages_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_ProductsToTags" ADD CONSTRAINT "_ProductsToTags_A_fkey" FOREIGN KEY ("A") REFERENCES "Products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_ProductsToTags" ADD CONSTRAINT "_ProductsToTags_B_fkey" FOREIGN KEY ("B") REFERENCES "Tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Messages" ADD CONSTRAINT "Messages_customersId_fkey" FOREIGN KEY ("customersId") REFERENCES "Customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;

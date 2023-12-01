@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   const { orders, totalEarned, ordersTotals, ordersTotalsCompleted, ordersTotalsActive, orderHits, messages } =
     useLoaderData<typeof loader>();
   const range = (searchParams.get('chart') as ManipulateType) || 'week';
+  console.log('orders', orders);
 
   let format = 'MMM';
   switch (range) {
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
     <div className='flex flex-row w-full space-x-10'>
       <div className='w-4/5 space-y-10'>
         <section id='cards' className='flex flex-row space-x-4 justify-between'>
-          <Card className='bg-[#F8E9CC] border-none w-full'>
+          <Card className='bg-secondary-100 border-none w-full'>
             <CardContent className='text-[#372400] py-6 px-4'>
               <div className='flex flex-row justify-between items-center space-x-2'>
                 <div className='text-lg font-bold'>
@@ -75,10 +76,10 @@ export default function AdminDashboard() {
                   <span>-67%</span>
                 </div>
               </div>
-              <p className='text-xs text-[#4A2502]'>Total earnings</p>
+              <p className='text-xs text-primary-brown'>Total earnings</p>
             </CardContent>
           </Card>
-          <Card className='bg-[#F8E9CC] border-none w-full'>
+          <Card className='bg-secondary-100 border-none w-full'>
             <CardContent className='text-[#372400] py-6 px-4'>
               <div className='flex flex-row justify-between items-center'>
                 <div className='text-lg font-bold'>
@@ -95,10 +96,10 @@ export default function AdminDashboard() {
                   <span>-2%</span>
                 </div>
               </div>
-              <p className='text-xs text-[#4A2502]'>Active orders</p>
+              <p className='text-xs text-primary-brown'>Active orders</p>
             </CardContent>
           </Card>
-          <Card className='bg-[#F8E9CC] border-none w-full'>
+          <Card className='bg-secondary-100 border-none w-full'>
             <CardContent className='text-[#372400] py-6 px-4'>
               <div className='flex flex-row justify-between items-center'>
                 <div className='text-lg font-bold'>
@@ -115,7 +116,7 @@ export default function AdminDashboard() {
                   <span>8%</span>
                 </div>
               </div>
-              <p className='text-xs text-[#4A2502]'>Completed orders</p>
+              <p className='text-xs text-primary-brown'>Completed orders</p>
             </CardContent>
           </Card>
         </section>
@@ -123,10 +124,10 @@ export default function AdminDashboard() {
           <div className='flex flex-row justify-between items-center w-full'>
             <div className='text-xl font-semibold'>Total earnings in the last 6 {range}s</div>
             <Tabs defaultValue='month' className=''>
-              <TabsList className='border border-[#F0D399] rounded-full bg-white'>
+              <TabsList className='border border-secondary-200 rounded-full bg-white'>
                 <button type='button' onClick={() => setRange('week')}>
                   <TabsTrigger
-                    className='rounded-full data-[state=active]:text-[#372400] text-[#A59280] data-[state=active]:bg-[#F0D399] px-5'
+                    className='rounded-full data-[state=active]:text-[#372400] text-secondary-500 data-[state=active]:bg-secondary-200 px-5'
                     value='week'
                     data-state={range === 'week' ? 'active' : ''}
                   >
@@ -135,7 +136,7 @@ export default function AdminDashboard() {
                 </button>
                 <button type='button' onClick={() => setRange('month')}>
                   <TabsTrigger
-                    className='rounded-full data-[state=active]:text-[#372400] text-[#A59280] data-[state=active]:bg-[#F0D399] px-5'
+                    className='rounded-full data-[state=active]:text-[#372400] text-secondary-500 data-[state=active]:bg-secondary-200 px-5'
                     value='month'
                     data-state={range === 'month' ? 'active' : ''}
                   >
@@ -144,7 +145,7 @@ export default function AdminDashboard() {
                 </button>
                 <button type='button' onClick={() => setRange('year')}>
                   <TabsTrigger
-                    className='rounded-full data-[state=active]:text-[#372400] text-[#A59280] data-[state=active]:bg-[#F0D399] px-5'
+                    className='rounded-full data-[state=active]:text-[#372400] text-secondary-500 data-[state=active]:bg-secondary-200 px-5'
                     value='year'
                     data-state={range === 'year' ? 'active' : ''}
                   >
@@ -162,10 +163,10 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
-        <section id='products' className='w-full rounded-t-xl border border-[#F8E9CC]'>
+        <section id='products' className='w-full rounded-t-xl border border-secondary-100'>
           <Table>
             <TableHeader>
-              <TableRow className='hover:bg-[#FFFBF2] bg-[#FFFBF2] [&>th]:text-[#A59280] [&>th]:font-semibold border-[#F8E9CC]'>
+              <TableRow className='hover:bg-secondary-50 bg-secondary-50 [&>th]:text-secondary-500 [&>th]:font-semibold border-secondary-100'>
                 <TableHead className='w-16 rounded-tl-xl'>№</TableHead>
                 <TableHead className='w-28'>Status</TableHead>
                 <TableHead className='min-w-fit max-w-fit'>Products</TableHead>
@@ -176,7 +177,7 @@ export default function AdminDashboard() {
             </TableHeader>
             <TableBody>
               {orders.map(order => (
-                <TableRow key={order.id} className='border-[#F8E9CC] hover:bg-[#fffdf8]'>
+                <TableRow key={order.id} className='border-secondary-100 hover:bg-[#fffdf8]'>
                   <TableCell className='w-16'>{order.id}</TableCell>
                   <TableCell className=''>
                     <div className='flex flex-row space-x-2 items-center'>
@@ -211,7 +212,7 @@ export default function AdminDashboard() {
                           />
                         </div>
                       ) : (
-                        <div className='flex justify-center items-center w-10 h-10 rounded-md ring-[3px] ring-white bg-[#F0D399]'>
+                        <div className='flex justify-center items-center w-10 h-10 rounded-md ring-[3px] ring-white bg-secondary-200'>
                           +{order.OrderItems.length - 2}
                         </div>
                       ))}
@@ -229,7 +230,7 @@ export default function AdminDashboard() {
                     </div>
                   </TableCell>
                   <TableCell className='text-center'>${order.total}</TableCell>
-                  <TableCell className='text-center'>{order.user.username}</TableCell>
+                  <TableCell className='text-center'>{order.Customers?.username}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -245,12 +246,12 @@ export default function AdminDashboard() {
                 <div className='flex flex-row space-x-4 items-center'>
                   <img className='w-12 h-12 rounded-sm' src={product.image} alt='' />
                   <div className='flex flex-col grow'>
-                    <div className='text-xs font-normal  text-[#A59280]'>{product.category?.name}</div>
+                    <div className='text-xs font-normal  text-secondary-500'>{product.category?.name}</div>
                     <div className='text-sm font-semibold flex flex-row space-x-1 items-center'>
                       {product.title.charAt(0).toUpperCase() + product.title.slice(1)}
                     </div>
                     <div className='text-xs font-bold'>
-                      ${product.price} / <span className='text-[#A59280]'>250 g.</span>
+                      ${product.price} / <span className='text-secondary-500'>250 g.</span>
                     </div>
                   </div>
                   <div className='flex flex-col space-y-1 text-right text-sm'>
@@ -275,12 +276,12 @@ export default function AdminDashboard() {
           {messages.map((message, index) => (
             <Card key={index} className='border-0 shadow-none'>
               <CardContent className='text-[#372400] py-4 px-0'>
-                <div className='text-xs text-[#A59280]'>{dayjs(message.createdAt).format('DD MMM YYYY')}</div>
+                <div className='text-xs text-secondary-500'>{dayjs(message.createdAt).format('DD MMM YYYY')}</div>
                 <div className='text-sm font-bold flex flex-row space-x-1 items-center'>{message.name}</div>
                 <div className='text-sm font-medium'>
                   {message.phone}, {message.email}
                 </div>
-                <div className='text-sm font-bold text-[#A59280] line-clamp-2'>{message.body}</div>
+                <div className='text-sm font-bold text-secondary-500 line-clamp-2'>{message.body}</div>
               </CardContent>
             </Card>
           ))}

@@ -30,7 +30,7 @@ export default function Test() {
         <ul className='flex space-x-4'>
           <li>
             <button
-              className='px-8 py-2 rounded-full bg-[#DA9100] font-medium text-base text-white'
+              className='px-8 py-2 rounded-full bg-primary font-medium text-base text-white'
               onClick={() => {
                 fetcher.submit({ status: 'published' }, { action: '/test', method: 'get' });
               }}
@@ -40,7 +40,7 @@ export default function Test() {
           </li>
           <li>
             <button
-              className='px-8 py-2 rounded-full bg-[#DA9100] font-medium text-base text-white'
+              className='px-8 py-2 rounded-full bg-primary font-medium text-base text-white'
               onClick={() => {
                 fetcher.submit({ status: 'draft' }, { action: '/test', method: 'get' });
               }}
@@ -50,7 +50,7 @@ export default function Test() {
           </li>
           <li>
             <button
-              className='px-8 py-2 rounded-full bg-[#DA9100] font-medium text-base text-white'
+              className='px-8 py-2 rounded-full bg-primary font-medium text-base text-white'
               onClick={() => {
                 fetcher.submit({ status: 'hidden' }, { action: '/test', method: 'get' });
               }}

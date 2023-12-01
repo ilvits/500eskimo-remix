@@ -37,7 +37,7 @@ export default function MainNavigation() {
                 <img src='/static/assets/icons/search.svg' alt='' />
               </Link>
               <li>
-                <NavLink to='/admin' className='flex space-x-2 items-center active:bg-[#FFFBF2]'>
+                <NavLink to='/admin' className='flex space-x-2 items-center active:bg-secondary-50'>
                   <img src='/static/assets/icons/account.svg' alt='' />
                   <div>Admin</div>
                 </NavLink>

@@ -1,7 +1,7 @@
 import { json, type LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import dayjs from 'dayjs';
-import { getAllOrders } from 'services_old/orders.server';
+import { getAllOrders } from 'tmp/services_old/orders.server';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const orders = await getAllOrders();

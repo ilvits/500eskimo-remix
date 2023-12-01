@@ -1,26 +1,34 @@
-import type { InputHTMLAttributes } from "react";
-import { useField } from "remix-validated-form";
+import type { InputHTMLAttributes } from 'react';
+import { useField } from 'remix-validated-form';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   name: string;
-  label: string;
+  label?: string;
+  sublabel?: string;
 }
 
-export function FormInput({ name, label, ...rest }: InputProps) {
+export function FormInput({ name, label, sublabel, ...rest }: InputProps) {
   const { error, getInputProps } = useField(name);
   return (
-    <div className='space-y-2'>
-      <label htmlFor={name}>{label}</label>
-
+    <div className=''>
+      {label && (
+        <label htmlFor={name} className='font-bold mb-4 block'>
+          {label}
+        </label>
+      )}
+      {sublabel && (
+        <label htmlFor={name} className='text-sm mb-2.5 block'>
+          {sublabel}
+        </label>
+      )}
       <input
-        className='bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+        className='bg-input-bg border border-input rounded-lg focus:ring-primary-brown focus:border-input-focus block w-full p-2.5
+        placeholder:text-primary-brown/50 hover:border-input-hover focus-visible:outline-none
+        dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
         {...getInputProps({ id: name })}
         {...rest}
       />
-
-      {error && (
-        <p className='text-sm text-red-600 dark:text-red-500'>{error}</p>
-      )}
+      {error && <p className='text-sm text-additional-red dark:text-additional-red'>{error}</p>}
     </div>
   );
 }

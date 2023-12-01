@@ -4,8 +4,30 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: #fff;
+    --foreground: #4a2502;
+
+    --primary: #da9100;
+    --primary-brown: #4a2502;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary-500: #a59280;
+    --secondary-400: #e1a733;
+    --secondary-300: #e9bd66;
+    --secondary-200: #f0d399;
+    --secondary-100: #f8e9cc;
+    --secondary-50: #fffbf2;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --additional-red: #d80d00;
+    --additional-roseHover: #fbc330;
+    --additional-pink: #ffdabf;
+    --additional-pinkHover: #ffddca;
+    --additional-green-100: #a6b24f;
+    --additional-green-50: #c0cc66;
+    --additional-green-0: #dfe3ae;
+    --additional-dark: #593c46;
+    --additional-foreground: 222.2 47.4% 11.2%;
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -13,14 +35,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: #a59280;
 
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
@@ -29,10 +45,10 @@
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --input: #f8e9cc;
+    --ring: #fff;
 
-    --radius: 0.5rem;
+    --radius: 8px;
   }
 
   .dark {
@@ -67,11 +83,9 @@
 }
 
 @layer base {
-  * {
-    font-family: 'Hauora Sans', sans-serif;
-    @apply border-border;
-  }
   body {
+    font-family: 'Hauora Sans', sans-serif;
+    @apply border-border antialiased;
     @apply bg-background text-foreground;
   }
 }

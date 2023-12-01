@@ -49,7 +49,7 @@ export default function DashboardChart({ chartData }: { chartData: Array<Object>
           content={({ active, payload, label }) => {
             if (active && payload && payload.length) {
               return (
-                <p className='text-sm bg-[#F8E9CC] border border-[#F8E9CC] px-2 py-1 rounded-md'>{`${label} : $${Number(
+                <p className='text-sm bg-secondary-100 border border-secondary-100 px-2 py-1 rounded-md'>{`${label} : $${Number(
                   payload[0].value
                 ).toFixed(2)}`}</p>
               );

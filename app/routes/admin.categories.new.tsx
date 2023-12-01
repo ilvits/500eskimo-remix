@@ -4,7 +4,7 @@ import { ValidatedForm, validationError } from 'remix-validated-form';
 import { withZod } from '@remix-validated-form/with-zod';
 import { useLoaderData } from '@remix-run/react';
 import { Input } from '~/components/ui/custom/Input';
-import { createCategory } from 'services_old/category.server';
+import { createCategory } from 'tmp/services_old/category.server';
 import { Button } from '~/components/ui/custom/Button';
 
 import invariant from 'tiny-invariant';

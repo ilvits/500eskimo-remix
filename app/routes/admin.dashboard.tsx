@@ -20,7 +20,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const startDate = dayjs()
     .subtract(6, chart?.toString() as ManipulateType)
     .toDate();
-
   const orders = await getOrders();
   const totalEarned = await getAllOrdersTotal();
   const ordersTotals = await getAllOrdersOnlyTotalsByDateRange(startDate, endDate);

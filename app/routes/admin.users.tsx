@@ -1,7 +1,7 @@
 import { type LoaderFunctionArgs, json } from '@remix-run/node';
 import { Form, useLoaderData } from '@remix-run/react';
 import dayjs from 'dayjs';
-import { getAllUsers } from 'services_old/account.server';
+import { getAllUsers } from 'tmp/services_old/account.server';
 import { useRootLoaderData } from '~/root';
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const users = json(await getAllUsers());

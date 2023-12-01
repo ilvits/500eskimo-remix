@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs } from '@remix-run/node';
-import { deleteCategory } from 'services_old/category.server';
+import { deleteCategory } from 'tmp/services_old/category.server';
 import invariant from 'tiny-invariant';
 import { redirect } from '@remix-run/node';
 

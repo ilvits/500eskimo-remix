@@ -1,6 +1,6 @@
 import { type LoaderFunctionArgs, json } from '@remix-run/node';
 import { Form, Link, useLoaderData } from '@remix-run/react';
-import { getAllCategories } from 'services_old/category.server';
+import { getAllCategories } from 'tmp/services_old/category.server';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const categories = await getAllCategories();

@@ -15,7 +15,7 @@ export const getAllOrdersCount = async () => {
 export const getAllOrders = async () => {
   const result = await prisma.orders.findMany({
     include: {
-      user: {
+      Customers: {
         select: {
           username: true,
           email: true,
@@ -27,7 +27,19 @@ export const getAllOrders = async () => {
           price: true,
         },
         include: {
-          product: true,
+          ProductItems: {
+            include: {
+              product: {
+                include: {
+                  category: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -51,26 +63,14 @@ export const getOrders = async (limit = 10) => {
           OrderItems: true,
         },
       },
-      user: {
+      Customers: {
         select: {
           username: true,
         },
       },
       OrderItems: {
         include: {
-          product: {
-            select: {
-              title: true,
-              description: true,
-              price: true,
-              category: {
-                select: {
-                  name: true,
-                },
-              },
-              image: true,
-            },
-          },
+          ProductItems: true,
         },
       },
     },
@@ -81,6 +81,7 @@ export const getOrders = async (limit = 10) => {
     ],
     take: limit,
   });
+  console.log('result: ', result);
 
   invariant(result, 'Unable to get orders');
   return result;
@@ -136,16 +137,20 @@ export const getOrdersTotalByStatus = async (status: string) => {
 };
 
 export const getOrderHits = async () => {
-  const result = await prisma.products.findMany({
+  const result = await prisma.productItems.findMany({
     include: {
       _count: {
         select: {
           OrderItems: true,
         },
       },
-      category: {
-        select: {
-          name: true,
+      product: {
+        include: {
+          category: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
     },

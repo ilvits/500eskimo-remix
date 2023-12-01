@@ -9,9 +9,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticator.isAuthenticated(request, {
     failureRedirect: '/auth/sign-in',
   });
-
   const url = new URL(request.url);
+  const q = url.searchParams.get('q');
   const { status, $skip, $top, orderBy, order, categoryId, tagId } = Object.fromEntries(url.searchParams.entries());
+  // console.log('q: ', q);
+
   const { products, total, groupProducts, categories, tags } = await getProducts({
     $top: Number($top) || 10,
     $skip: Number($skip) || 0,
@@ -20,12 +22,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     order: order || 'asc',
     categoryId: categoryId || '',
     tagId: tagId || '',
+    q: q?.trim() || '',
   });
 
-  // const productsByStatus = await getProductsGruppedByStatus();
-  // console.log(productsByStatus);
-
-  // console.dir(products);
   return json({
     products,
     total,
@@ -39,6 +38,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     orderBy,
     order,
     categoryId,
+    q,
   });
 };
 

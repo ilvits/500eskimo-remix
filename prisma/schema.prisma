@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
 }
 
 datasource db {
@@ -58,42 +59,64 @@ model Categories {
   Products    Products[]
 }
 
-model Products {
-  id            Int           @id @default(autoincrement())
-  title         String
-  slug          String        @unique
-  productStatus ProductStatus @default(draft)
-  categoryId    Int
-  category      Categories    @relation(fields: [categoryId], references: [id])
-  tagIds        String[]
-  tags          String[]
-  sku           String
-  description   String?
-  price         Decimal
-  image         String
-  rating        Int
-  stock         Int
-  numReviews    Int
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @default(now())
-  OrderItems    OrderItems[]
-
-  @@index([title], map: "title_idx")
-  @@index([tagIds], map: "tagIds_idx", type: Gin)
-  @@index([categoryId], map: "category_id_idx")
-  @@index([price], map: "price_idx")
-  @@index([stock], map: "stock_idx")
-  @@index([rating], map: "rating_idx")
-  @@index([numReviews], map: "num_reviews_idx")
-  @@index([updatedAt], map: "updated_at_idx")
+model Tags {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  slug  String @unique
+  color String
 }
 
-model Tags {
-  id         Int      @id @default(autoincrement())
-  name       String   @unique
-  slug       String   @unique
-  color      String
-  productIds String[]
+model Products {
+  id              Int               @id @default(autoincrement())
+  categoryId      Int
+  tagIds          String[]
+  title           String
+  slug            String            @unique
+  description     String?
+  image           String
+  rating          Int
+  numReviews      Int
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now())
+  tags            String[]
+  productStatus   ProductStatus     @default(draft)
+  productVariants ProductVariants[]
+  category        Categories        @relation(fields: [categoryId], references: [id])
+}
+
+model ProductVariants {
+  id            Int          @id @default(autoincrement())
+  productId     Int
+  optionValueId Int
+  quantity      Int
+  price         Decimal
+  sku           String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now())
+  options       Options[]
+  product       Products     @relation(fields: [productId], references: [id])
+  optionValue   OptionValues @relation(fields: [optionValueId], references: [id])
+}
+
+model Options {
+  id              Int               @id @default(autoincrement())
+  name            String
+  description     String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now())
+  optionValues    OptionValues[]
+  productVariants ProductVariants[]
+}
+
+model OptionValues {
+  id              Int               @id @default(autoincrement())
+  optionId        Int
+  option          Options           @relation(fields: [optionId], references: [id])
+  value           String
+  unit            String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now())
+  ProductVariants ProductVariants[]
 }
 
 model Orders {
@@ -124,7 +147,6 @@ model OrderItems {
   orderId   Int
   productId Int
   order     Orders   @relation(fields: [orderId], references: [id])
-  product   Products @relation(fields: [productId], references: [id])
   quantity  Int
   price     Decimal
   createdAt DateTime @default(now())

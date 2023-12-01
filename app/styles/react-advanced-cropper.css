@@ -1,0 +1,8 @@
+.cropper {
+  background: #f6f4ef;
+  color: #a59280;
+}
+
+.advanced-cropper-stencil-overlay {
+  color: rgba(255, 251, 242, 0.6) !important;
+}

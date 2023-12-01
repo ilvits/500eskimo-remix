@@ -23,6 +23,13 @@ import '@fontsource/hauora-sans/500.css';
 import '@fontsource/hauora-sans/600.css';
 import '@fontsource/hauora-sans/700.css';
 
+type error = {
+  status: number;
+  statusText: string;
+  data: string;
+  message: string;
+};
+
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: styles },
   ...(cssBundleHref ? [{ rel: 'stylesheet', href: cssBundleHref }] : []),
@@ -37,14 +44,14 @@ export function useRootLoaderData() {
 
 export default function App() {
   return (
-    <html lang='en'>
+    <html lang='en' className=''>
       <head>
         <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <Meta />
         <Links />
       </head>
-      <body className='font-medium text-[#4A2502]'>
+      <body className='text-primary-brown'>
         <Layout>
           <Outlet />
           <ScrollRestoration />
@@ -57,7 +64,7 @@ export default function App() {
 }
 
 export function ErrorBoundary() {
-  const error = useRouteError();
+  const error = useRouteError() as Error | error;
   console.error(error);
   return (
     <html>
@@ -67,7 +74,22 @@ export function ErrorBoundary() {
         <Links />
       </head>
       <body>
-        {error instanceof Error ? <pre>{error.message}</pre> : <pre>{JSON.stringify(error, null, 2)}</pre>}
+        <div className='flex flex-col items-center justify-center w-full p-6 h-screen bg-secondary-50 text-primary-brown rounded border border-secondary-200'>
+          <img src='/static/assets/eskimo_sad.svg' alt='' />
+          <h1 className='text-3xl font-bold mb-8'>Oh no!</h1>
+          {error instanceof Error ? (
+            <pre>{error.message}</pre>
+          ) : (
+            <>
+              <p className='text-xl'>
+                {error?.status ? `${error?.status}: ` : ''}
+                {error?.statusText}
+              </p>
+              <p>{error?.message}</p>
+              <p>{`(${error?.data})`}</p>
+            </>
+          )}
+        </div>
         <Scripts />
       </body>
     </html>

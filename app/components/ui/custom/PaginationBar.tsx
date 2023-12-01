@@ -36,8 +36,8 @@ export function PaginationBar({ total }: { total: number }) {
   });
   return (
     <>
-      {totalPages > 1 && (
-        <Form method='GET' className='flex items-center gap-1 text-[#4A2502]' preventScrollReset>
+      {totalPages > 1 ? (
+        <Form method='GET' className='flex items-center gap-1 text-primary-brown' preventScrollReset>
           <>
             {[['$top', String($top)], ...existingParams].map(([key, value]) => {
               return <input key={key} type='hidden' name={key} value={value} />;
@@ -51,7 +51,7 @@ export function PaginationBar({ total }: { total: number }) {
             aria-label='First page'
             className='min-w-[32px] min-h-[32px] flex items-center justify-center disabled:opacity-50'
           >
-            <PiArrowLineLeftBold className='fill-[#4A2502]' />
+            <PiArrowLineLeftBold className='fill-primary-brown' />
           </button>
           <button
             type='submit'
@@ -61,7 +61,7 @@ export function PaginationBar({ total }: { total: number }) {
             aria-label='Previous page'
             className='min-w-[32px] min-h-[32px] flex items-center justify-center disabled:opacity-50'
           >
-            <PiArrowLeftBold className='fill-[#4A2502]' />
+            <PiArrowLeftBold className='fill-primary-brown' />
           </button>
           {pageNumbers.map(pageNumber => {
             const pageSkip = (pageNumber - 1) * $top;
@@ -72,7 +72,7 @@ export function PaginationBar({ total }: { total: number }) {
                 <button
                   type='submit'
                   name='$skip'
-                  className='min-w-[32px] min-h-[32px] rounded-md border border-[#F0D399] bg-[#FFFBF2]'
+                  className='min-w-[32px] min-h-[32px] rounded-md border border-secondary-200 bg-secondary-50'
                   key={`${pageNumber}-active`}
                   value={pageSkip}
                   aria-label={`Page ${pageNumber}`}
@@ -105,7 +105,7 @@ export function PaginationBar({ total }: { total: number }) {
             aria-label='Next page'
             className='min-w-[32px] min-h-[32px] flex items-center justify-center disabled:opacity-50'
           >
-            <PiArrowRightBold className='fill-[#4A2502]' />
+            <PiArrowRightBold className='fill-primary-brown' />
           </button>
           <button
             type='submit'
@@ -115,9 +115,11 @@ export function PaginationBar({ total }: { total: number }) {
             aria-label='Last page'
             className='min-w-[32px] min-h-[32px] flex items-center justify-center disabled:opacity-50'
           >
-            <PiArrowLineRightBold className='fill-[#4A2502]' />
+            <PiArrowLineRightBold className='fill-primary-brown' />
           </button>
         </Form>
+      ) : (
+        <div></div>
       )}
     </>
   );

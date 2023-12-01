@@ -6,22 +6,25 @@ export function AdminSidebar() {
   const { ordersCount, messagesCount } = useLoaderData<typeof loader>();
 
   return (
-    <div className='ml-12 fixed bg-white'>
-      <nav id='sidebar' className='w-[188px] pr-4 flex flex-col space-y-1'>
+    <div className='bg-white'>
+      <nav id='sidebar' className='w-[188px] pr-8 flex flex-col space-y-1'>
         <NavLink
           to='dashboard'
-          className='flex items-center space-x-2.5 px-2 py-2.5 rounded-lg [&.active]:bg-[#FFFBF2]'
+          className='flex items-center space-x-2.5 px-2 py-2.5 rounded-lg [&.active]:bg-secondary-50'
         >
           <img className='w-6 h-6' src='/static/assets/icons/menu/icecream.svg' alt='' />
           <span>Dashboard</span>
         </NavLink>
-        <NavLink to='products' className='flex items-center space-x-2.5 px-2 py-2.5 rounded-lg [&.active]:bg-[#FFFBF2]'>
+        <NavLink
+          to='products'
+          className='flex items-center space-x-2.5 px-2 py-2.5 rounded-lg [&.active]:bg-secondary-50'
+        >
           <img className='w-6 h-6' src='/static/assets/icons/menu/catalog.svg' alt='' />
           <span>Catalog</span>
         </NavLink>
         <NavLink
           to='orders'
-          className='flex items-center justify-between px-2 py-2.5 rounded-lg [&.pending]:bg-[#FFFBF2] [&.active]:bg-[#FFFBF2]'
+          className='flex items-center justify-between px-2 py-2.5 rounded-lg [&.pending]:bg-secondary-50 [&.active]:bg-secondary-50'
         >
           <div className='flex items-center space-x-2.5'>
             <img className='w-6 h-6' src='/static/assets/icons/menu/bag.svg' alt='' />
@@ -33,7 +36,7 @@ export function AdminSidebar() {
         </NavLink>
         <NavLink
           to='messages'
-          className='flex items-center justify-between px-2 py-2.5 rounded-lg [&.active]:bg-[#FFFBF2]'
+          className='flex items-center justify-between px-2 py-2.5 rounded-lg [&.active]:bg-secondary-50'
         >
           <div className='flex items-center space-x-2.5'>
             <img className='w-6 h-6' src='/static/assets/icons/menu/mail.svg' alt='' />
