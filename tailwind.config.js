@@ -12,7 +12,7 @@ module.exports = {
     },
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
+        border: '#F8E9CC',
         input: '#f8e9cc',
         'input-bg': '#fffbf2',
         'input-hover': '#e9bd66',
@@ -46,6 +46,9 @@ module.exports = {
             0: '#dfe3ae',
           },
           dark: '#593c46',
+        },
+        backgroundImage: {
+          'dashed-border': "url('/static/assets/dashed-border.svg')",
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',

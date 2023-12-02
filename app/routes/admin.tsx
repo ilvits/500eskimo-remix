@@ -26,7 +26,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function ProtectedLayout() {
   return (
-    <main id='admin' className='flex flex-row mb-12 max-w-7xl w-full mx-auto px-16'>
+    <main id='admin' className='flex flex-row mb-12 max-w-[1440px] w-full mx-auto px-16'>
       <AdminSidebar />
       <section className='w-full'>
         <Outlet />

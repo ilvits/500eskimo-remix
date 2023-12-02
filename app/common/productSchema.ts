@@ -8,16 +8,16 @@ export const categorySchema = z.object({
 export type AddCategory = z.infer<typeof categorySchema>;
 
 export const productSchema = z.object({
-  sku: z.string().min(12, 'Must contain at least 12 chars'),
-  title: z.string(),
-  description: z.string(),
-  price: z.coerce.number(),
-  image: z.string(),
-  rating: z.coerce.number(),
-  stock: z.coerce.number(),
-  numReviews: z.coerce.number(),
-  categoryId: z.coerce.number(),
-  ProductStatus: z.enum(['published', 'draft', 'unpublished']).default('published').optional(),
+  // sku: z.string().min(12, 'Must contain at least 12 chars'),
+  // title: z.string(),
+  // description: z.string(),
+  // price: z.coerce.number(),
+  // image: z.string(),
+  // rating: z.coerce.number(),
+  // stock: z.coerce.number(),
+  // numReviews: z.coerce.number(),
+  // categoryId: z.coerce.number(),
+  // ProductStatus: z.enum(['published', 'draft', 'unpublished']).default('published').optional(),
   // tagIds: z.array(z.coerce.number()),
 });
 
