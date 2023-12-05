@@ -1,7 +1,13 @@
+import cloudinary from 'cloudinary';
 import invariant from 'tiny-invariant';
 import { prisma } from '~/lib/prisma.server';
 import slugify from '@sindresorhus/slugify';
 
+interface UploadedImage {
+  secure_url?: string;
+  url: string;
+  public_id: string;
+}
 export const getProducts = async ({
   q,
   productStatus,
@@ -93,23 +99,6 @@ export const getProducts = async ({
     prisma.categories.findMany(),
     prisma.tags.findMany(),
   ]);
-  console.log(result[1]);
-
-  // const result2 = await prisma.productVariants.findMany({
-  //   include: {
-  //     product: {
-  //       include: {
-  //         category: {
-  //           select: {
-  //             name: true,
-  //           },
-  //         },
-  //       },
-  //     },
-  //   },
-  // });
-
-  // console.log(result2);
 
   for (const product of result[1] as any) {
     product.tags = result[4]
@@ -127,22 +116,66 @@ export const getProducts = async ({
     };
   });
 
-  // console.log('**************| products.server |*********************');
-  // console.log({ productStatus, groupProducts, $top, $skip, orderBy, order });
-  // console.log({ ...result[1][1] });
-
-  // console.log({ ...result });
-  // console.log('**************| products.server |*********************');
-
   invariant(result, 'Unable to get all products');
   return { total: result[0], products: result[1], groupProducts, categories: result[3], tags: result[4] };
 };
-export const createProduct = async (data: any) => {
+export const createProduct = async (data: any, images: any, tagIds: any, productVariants: any) => {
   data.slug = slugify(data.title);
-  data.categoryName = '';
-  const product = await prisma.products.create({ data });
+  data.tagIds = tagIds;
+
+  if (data.cover && data.cover.length > 0) {
+    const uploadedCover = (await cloudinary.v2.uploader.upload(
+      data.cover,
+      { public_id: `products/${data.categoryId}/${data.slug}/${data.slug}_cover`, overwrite: true },
+      function (error, result) {
+        console.log('uploadedCover: ', result);
+        if (error) {
+          console.log(error);
+        }
+      }
+    )) as UploadedImage;
+
+    data.cover = uploadedCover.secure_url || uploadedCover.url;
+    data.cover_public_id = uploadedCover.public_id;
+  }
+
+  const uploadedImages = await Promise.all(
+    images
+      .filter((image: any) => image !== '')
+      .map(async (image: any) => {
+        const uploadedImage = (await cloudinary.v2.uploader.upload(
+          image,
+          { folder: `products/${data.categoryId}/${data.slug}` },
+          function (error, result) {
+            console.log('uploadedImage: ', result);
+            if (error) {
+              console.log('error: ', error);
+            }
+          }
+        )) as UploadedImage;
+        return uploadedImage;
+      })
+  );
+
+  const product = await prisma.products.create({
+    data: {
+      ...data,
+      productImages: {
+        create: uploadedImages.map(image => {
+          return {
+            imageUrl: image.secure_url || image.url,
+            publicId: image.public_id,
+          };
+        }),
+      },
+      productVariants: {
+        create: productVariants,
+      },
+    },
+  });
   invariant(product, 'Unable to create product');
   return product;
+  return;
 };
 export const getProduct = async (id: number) => {
   const product = await prisma.products.findUnique({ where: { id } });
@@ -158,4 +191,22 @@ export const getAllTags = async () => {
   const tags = await prisma.tags.findMany();
   invariant(tags, 'Unable to get all tags');
   return tags;
+};
+
+export const getOptions = async () => {
+  const options = await prisma.options.findMany({
+    select: {
+      id: true,
+      name: true,
+      optionValues: {
+        select: {
+          id: true,
+          value: true,
+          unit: true,
+        },
+      },
+    },
+  });
+  invariant(options, 'Unable to get all options');
+  return options;
 };

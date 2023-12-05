@@ -1,31 +1,51 @@
-import { type AddProduct, productSchema } from '~/common/productSchema';
-
-import { json, redirect, type LoaderFunction, type LinksFunction } from '@remix-run/node';
-import { ValidatedForm, validationError } from 'remix-validated-form';
-import { withZod } from '@remix-validated-form/with-zod';
-import { useLoaderData } from '@remix-run/react';
-import { createProduct, getAllCategories, getAllTags } from '~/services/products.server';
-import { FormInput } from '~/components/ui/custom/FormInput';
-import { FormTextarea } from '~/components/ui/custom/FormTextarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/custom/Select';
-import { Switch } from '~/components/ui/switch';
-import { Button } from '~/components/ui/button';
-import { useEffect, useRef, useState } from 'react';
-import { type DropzoneOptions, useDropzone, type FileRejection } from 'react-dropzone-esm';
-import { Cropper, getTransformedImageSize, retrieveSizeRestrictions } from 'react-advanced-cropper';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '~/components/ui/alert-dialog';
 import type { Coordinates, CropperRef, CropperState, DefaultSettings } from 'react-advanced-cropper';
+import { Cropper, getTransformedImageSize, retrieveSizeRestrictions } from 'react-advanced-cropper';
+import type { DataFunctionArgs, LinksFunction, LoaderFunction } from '@remix-run/node';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '~/components/ui/dialog';
-
-import reactCroperCSS from 'react-advanced-cropper/dist/style.css';
-import reactCroperTheme from 'react-advanced-cropper/dist/themes/corners.css';
-import reactCroperAdditional from '~/styles/react-advanced-cropper.css';
-import dashedBorderCSS from '~/styles/dashed-border.css';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '~/components/ui/custom/dropdown-menu';
+import type { DropzoneOptions, FileRejection } from 'react-dropzone';
+import { ValidatedForm, validationError } from 'remix-validated-form';
+import { createProduct, getAllCategories, getAllTags, getOptions } from '~/services/products.server';
+import { json, redirect } from '@remix-run/node';
+import { useActionData, useBlocker, useLoaderData, useNavigation } from '@remix-run/react';
+import { useEffect, useRef, useState } from 'react';
+
+import type { AddProduct } from '~/common/productSchema';
+import { Button } from '~/components/ui/button';
+import { FormInput } from '~/components/ui/custom/FormInput';
+import { FormTextarea } from '~/components/ui/custom/FormTextarea';
+import { ProductOptionSelect } from '~/components/ui/custom/ProductOptionSelect';
+import { Switch } from '~/components/ui/switch';
+import { TagsSelect } from '~/components/ui/custom/TagsSelect';
+import dashedBorderCSS from '~/styles/dashed-border.css';
+import { productSchema } from '~/common/productSchema';
+import reactCroperAdditional from '~/styles/react-advanced-cropper.css';
+import reactCroperCSS from 'react-advanced-cropper/dist/style.css';
+import reactCroperTheme from 'react-advanced-cropper/dist/themes/corners.css';
+import { useDropzone } from 'react-dropzone-esm';
+import { withZod } from '@remix-validated-form/with-zod';
+
+type ProductVariants = {
+  [key: string]: any;
+};
+
+const validator = withZod(productSchema);
 
 export const links: LinksFunction = () => {
   return [
@@ -36,68 +56,109 @@ export const links: LinksFunction = () => {
   ];
 };
 
-const validator = withZod(productSchema);
-
 export const loader: LoaderFunction = async () => {
-  const defaultValues: AddProduct = {
-    sku: '',
-    title: '',
-    description: '',
-    price: 0,
-    image: '',
-    rating: 0,
-    stock: 0,
-    numReviews: 0,
-    categoryId: 2,
-  };
-
   const categories = await getAllCategories();
   const tags = await getAllTags();
-  return json({ defaultValues, categories, tags });
+  const options = await getOptions();
+  return json({ categories, tags, options });
 };
 
-export const action = async ({ request }: { request: Request }) => {
+export const action = async ({ request }: DataFunctionArgs) => {
   const formData = await request.formData();
-  console.log('formData: ', formData);
+  const fieldValues = (await validator.validate(formData)) || { data: {} };
 
-  const fieldValues = await validator.validate(formData);
   if (fieldValues.error) return validationError(fieldValues.error);
 
-  const result = await createProduct(fieldValues.data);
-  console.log('result: ', result);
-  if (!result) throw new Error('Something went wrong');
+  console.log('createProduct fieldValues: ', fieldValues);
+  const tagIds = formData.getAll('tagIds');
+  const imagesData = formData.getAll('images');
+  const productVariants = JSON.parse(formData.get('productVariants') as string);
 
-  return redirect('/admin/products');
+  console.log('images: ', imagesData.length);
+
+  const createdProduct = await createProduct(fieldValues.data, imagesData, tagIds, productVariants);
+  console.log('createProduct createdProduct: ', createdProduct);
+  if (!createdProduct) throw new Error('Something went wrong');
+
+  return redirect('/admin/products?status=draft');
 };
 
 export default function AddNewProduct() {
-  const [src, setSrc] = useState('');
-  const [image, setImage] = useState<string>('');
+  const navigation = useNavigation();
+  const cropperRef = useRef<CropperRef>(null);
+
+  const [coverSrc, setCoverSrc] = useState<string | null | undefined>(null);
+  const [image, setImage] = useState<string | null | undefined>(undefined);
   const [files, setFiles] = useState<string[]>([]);
   const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [dropZoneErrors, setDropZoneErrors] = useState<string[]>([]);
-  const { defaultValues, categories } = useLoaderData<typeof loader>();
-  const [tags, setTags] = useState<string[]>([]);
+  const [productVariants, setProductVariants] = useState<ProductVariants[]>([]);
+  const [formErrors, setFormErrors] = useState<object>({});
 
-  const cropperRef = useRef<CropperRef>(null);
+  const { tags, options } = useLoaderData<typeof loader>();
+  const data = useActionData<typeof action>();
+
+  const defaultValues: AddProduct = {
+    categoryId: 1,
+    title: '',
+    description: 'Cubes test description',
+    cover: '',
+    conditions: '12 months at -18°C',
+    callories: 0,
+    protein: 0,
+    fat: 0,
+    carbs: 0,
+    tagIds: [],
+    productVariants: [
+      {
+        name: null,
+        price: null,
+        sku: null,
+        quantity: null,
+        optionValueId: null,
+      },
+    ],
+  };
+
+  console.log('formErrors: ', formErrors);
 
   useEffect(() => {
-    if (src) {
+    if (coverSrc) {
       const img = new Image();
-      img.src = src;
+      img.src = coverSrc as string;
       img.onload = () => {
         setImgElement(img);
       };
     }
-  }, [src]);
+  }, [coverSrc]);
 
   useEffect(() => {
-    if (!src && image) {
-      setSrc(image);
+    if (!coverSrc && image) {
+      setCoverSrc(image);
     }
-  }, [image, src]);
+  }, [image, coverSrc]);
 
+  useEffect(() => {
+    image && setFormErrors((prevState: object) => ({ ...prevState, cover: null }));
+  }, [image]);
+
+  useEffect(() => {
+    productVariants.length > 0 && setFormErrors((prevState: object) => ({ ...prevState, productVariants: null }));
+  }, [productVariants]);
+
+  useEffect(() => {
+    productVariants.every(variant => variant.optionValueId) &&
+      setFormErrors((prevState: object) => ({ ...prevState, optionValueId: null }));
+  }, [productVariants]);
+
+  const toBase64 = (file: File): Promise<string | ArrayBuffer | null> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
   const defaultSize = ({ imageSize, visibleArea }: CropperState) => {
     return {
       width: (visibleArea || imageSize).width,
@@ -136,21 +197,17 @@ export default function AddNewProduct() {
             top: imgElement ? imgElement.height / 2 - imgElement.width / 2 : 0,
           }));
   };
-
   const onChangeCoverImage = (file: File) => {
-    setSrc(URL.createObjectURL(file));
-    setImage(URL.createObjectURL(file));
+    toBase64(file).then(base64 => {
+      setCoverSrc(base64 as string);
+      setImage(base64 as string);
+    });
     resetCoordinates();
   };
-
   const onCrop = () => {
     if (cropperRef.current) {
       setCoordinates(cropperRef.current.getCoordinates());
-      // You are able to do different manipulations at a canvas
-      // but there we just get a cropped image, that can be used
-      // as src for <img/> to preview result
       setImage(cropperRef.current.getCanvas()?.toDataURL() as string);
-      console.log('coordinates: ', coordinates);
     }
   };
 
@@ -178,64 +235,188 @@ export default function AddNewProduct() {
       console.log('rejectedFiles: ', fileRejections);
       !fileRejections.length && setDropZoneErrors([]);
       acceptedFiles.forEach((file: File) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onabort = () => console.log('file reading was aborted');
-        reader.onerror = () => console.log('file reading has failed');
-        reader.onload = () => {
-          setFiles(prev => (prev.includes(reader.result as string) ? prev : [...prev, reader.result as string]));
-        };
+        toBase64(file).then(base64 => {
+          setFiles(prev => (prev.includes(base64 as string) ? prev : [...prev, base64 as string]));
+        });
       });
     },
   } as DropzoneOptions);
 
+  const addProductVariant = () => {
+    setProductVariants(prev => [...prev, { name: '', sku: '', price: 0, quantity: 0, optionValueId: null }]);
+  };
+
+  const removeProductVariant = (index: number) => {
+    setProductVariants(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const duplicateProductVariant = (index: number) => {
+    setProductVariants(prev => [...prev, prev[index]]);
+  };
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      productVariants.length !== 0 && currentLocation.pathname !== nextLocation.pathname
+  );
+
   return (
     <div>
+      {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
       <h1 className='text-2xl font-bold mb-8'>Add New Product</h1>
-      <ValidatedForm method='POST' action='/admin/products/new' validator={validator} defaultValues={defaultValues}>
+      <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
+        <input type='hidden' name='categoryId' value={defaultValues.categoryId} />
+        <input type='hidden' name='productStatus' value='draft' />
+        <input type='hidden' name='rating' value='0' />
+        <input type='hidden' name='numReviews' value='0' />
+        {image && <input type='hidden' name='cover' value={image} />}
+        {files && files.map((file, i) => <input key={i} type='hidden' name='images' value={file} />)}
+        <input type='hidden' id='productVariants' name='productVariants' value={JSON.stringify(productVariants)} />
+        {/* {selectedTags && selectedTags.map((tag, i) => <input key={i} type='hidden' name='tagIds' value={tag} />)} */}
         <div className='flex w-full items-start space-x-12'>
           <div className='w-3/5 space-y-8'>
             <FormInput type='text' name='title' id='title' label='Title' />
             <FormTextarea className='mb-4' name='description' id='description' label='Description' />
-            <div>
-              <label className='mb-4 font-bold block' htmlFor='categoryId'>
-                Category
-              </label>
-              <Select name='categoryId'>
-                <SelectTrigger>
-                  <SelectValue placeholder='Choose a category' />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category: any) => (
-                    <SelectItem key={category.id} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-4'>
-              <FormInput
-                id='price'
-                type='text'
-                name='conditions'
-                label='Characteristics'
-                sublabel='Shelf life and conditions'
-              />
-              <div className='space-x-4 flex items-center'>
-                <FormInput type='number' name='callories' id='price' sublabel='Callories' />
-                <FormInput type='number' name='nutrition' id='price' sublabel='Nutrition' />
-                <FormInput type='number' name='fat' id='price' sublabel='Fat' />
-                <FormInput type='number' name='carbohydrates' id='price' sublabel='Carbohydrates' />
+            <section>
+              <div className='w-full flex items-center justify-between mb-2 '>
+                <h2
+                  className={`text-lg font-bold ${formErrors.productVariants && '!text-additional-red animate-shake'}`}
+                >
+                  Product Variants ({productVariants.length})
+                </h2>
+                <button
+                  type='button'
+                  onClick={addProductVariant}
+                  className='w-9 h-9 bg-secondary-500 rounded-full text-white text-2xl flex items-center justify-center'
+                >
+                  +
+                </button>
               </div>
-              <FormInput type='text' name='tags' id='tags' sublabel='Tags' />
+
+              {productVariants.length > 0 &&
+                (console.log('productVariants: ', productVariants[0]),
+                (
+                  <div className='flex flex-col gap-4 border-t border-primary-brown pt-4'>
+                    {productVariants.map((variant, i) => (
+                      <div key={i}>
+                        <div className='space-y-4'>
+                          <div className='flex items-center justify-between mb-4'>
+                            <h3 className='text-lg font-bold'>{variant.name || 'Variant ' + (i + 1)}</h3>
+                            <div className='flex items-center space-x-2'>
+                              <button type='button' onClick={() => duplicateProductVariant(i)}>
+                                <img src='/static/assets/icons/duplicate.svg' alt='' />
+                              </button>
+                              <AlertDialog>
+                                <AlertDialogTrigger>
+                                  <button type='button'>
+                                    <img src='/static/assets/icons/trash-red.svg' alt='' />
+                                  </button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. Are you sure?
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => removeProductVariant(i)}>
+                                      Continue
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                          <div className='grid grid-cols-2 gap-4'>
+                            {Object.entries(variant).map(([key, value]) =>
+                              key === 'optionValueId' ? null : (
+                                <FormInput
+                                  key={key}
+                                  type={typeof value}
+                                  name={`variants.${i}.${key}`}
+                                  sublabel={key}
+                                  // defaultValue={value as string}
+                                  // value={key in productVariants[i][key] ? productVariants[i][key] : ''}
+                                  value={productVariants[i][key]}
+                                  // value={key in variant ? variant[key] : ''}
+                                  onChange={e => {
+                                    setProductVariants(prev =>
+                                      prev.map((v, j) =>
+                                        i === j
+                                          ? {
+                                              ...v,
+                                              [key]:
+                                                typeof value === 'string' ? e.target.value : Number(e.target.value),
+                                            }
+                                          : v
+                                      )
+                                    );
+                                  }}
+                                />
+                              )
+                            )}
+                            {options &&
+                              options.length > 0 &&
+                              options.map((option: any) => (
+                                <div key={option.id}>
+                                  <ProductOptionSelect
+                                    label={option.name}
+                                    aria-labelledby='option-label'
+                                    name={`variants.${i}.${option.id}.optionValueId`}
+                                    options={option.optionValues}
+                                    defaultValue={option.optionValues.find((o: any) => o.id === variant.optionValueId)}
+                                    errors={formErrors}
+                                    onChange={(option: any) => {
+                                      setProductVariants(prev =>
+                                        prev.map((v, j) =>
+                                          i === j
+                                            ? {
+                                                ...v,
+                                                optionValueId: Number(option.id),
+                                              }
+                                            : v
+                                        )
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+            </section>
+            <div className='space-y-4'>
+              <FormInput type='text' name='conditions' label='Characteristics' sublabel='Shelf life and conditions' />
+              <div className='space-x-4 flex items-center'>
+                <FormInput type='number' name='callories' sublabel='Callories' />
+                <FormInput type='number' name='protein' sublabel='Protein' />
+                <FormInput type='number' name='fat' sublabel='Fat' />
+                <FormInput type='number' name='carbs' sublabel='Carbs' />
+              </div>
+              {/* <input type='hidden' name='tagIds' value={Array.from(tags).map(tag => tag.id.toString())} /> */}
+              <TagsSelect tags={tags} name='tagIds' label='Tags' />
             </div>
             <label htmlFor='freeDelivery' className='flex items-center justify-between'>
               <p>Free Delivery</p>
               <Switch id='freeDelivery' name='freeDelivery' />
             </label>
             <div className='flex space-x-4'>
-              <Button type='submit'>Add Product</Button>
+              <Button
+                type='submit'
+                className='disabled:cursor-not-allowed disabled:opacity-50'
+                disabled={navigation.state !== 'idle'}
+                onClick={() => {
+                  !image && setFormErrors(prev => ({ ...prev, cover: true }));
+                  !productVariants.length && setFormErrors(prev => ({ ...prev, productVariants: true }));
+                  !productVariants.every(variant => variant.optionValueId) &&
+                    setFormErrors(prev => ({ ...prev, productVariants: true, optionValueId: true }));
+                }}
+              >
+                Add Product
+              </Button>
               <Button type='button' variant='secondary' onClick={() => window.history.back()}>
                 Cancel
               </Button>
@@ -250,7 +431,11 @@ export default function AddNewProduct() {
                     <img className='relative w-full aspect-square object-cover rounded-xl' src={image} alt='' />
                   ) : (
                     <>
-                      <p className='flex items-center justify-center w-full text-3xl text-secondary-500 h-full aspect-square '>
+                      <p
+                        className={`flex items-center justify-center w-full text-3xl text-secondary-500 h-full aspect-square transition-all duration-500 ${
+                          formErrors.cover && '!text-additional-red animate-shake'
+                        }`}
+                      >
                         Upload cover please
                       </p>
                     </>
@@ -261,14 +446,14 @@ export default function AddNewProduct() {
                         className='hidden'
                         type='file'
                         name='cover-change'
-                        id='cover-change'
+                        id='image-change'
                         onChange={e => e.target.files?.[0] && onChangeCoverImage(e.target.files[0] as File)}
                       />
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
                             type='button'
-                            className=' w-9 h-9 bg-secondary-500 p-2 rounded-lg flex items-center justify-center'
+                            className=' w-9 h-9 bg-secondary-500 p-2 rounded-full flex items-center justify-center'
                           >
                             <img src='/static/assets/icons/pencilWhite.svg' alt='' />
                           </button>
@@ -278,26 +463,26 @@ export default function AddNewProduct() {
                             <DialogTrigger className='w-full text-right cursor-pointer'>Edit</DialogTrigger>
                           </DropdownMenuItem>
                           <DropdownMenuItem>
-                            <label htmlFor='cover-change'>Replace</label>
+                            <label htmlFor='image-change'>Replace</label>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   ) : (
                     <label
-                      className='w-9 h-9 bg-secondary-500 text-white p-2 rounded-lg flex items-center justify-center cursor-pointer absolute bottom-2 right-2'
-                      htmlFor='cover'
+                      className='w-9 h-9 text-2xl bg-secondary-500 text-white p-2 rounded-full flex items-center justify-center cursor-pointer absolute bottom-2 right-2'
+                      htmlFor='image'
                     >
                       <input
                         className='hidden'
                         type='file'
-                        name='cover'
-                        id='cover'
+                        name='image'
+                        id='image'
                         accept='image/png, image/jpeg, image/webp'
                         onChange={e => {
-                          console.log(e.target.files?.[0]);
-                          // setSrc(URL.createObjectURL(e.target.files?.[0] as File));
-                          setImage(URL.createObjectURL(e.target.files?.[0] as File));
+                          toBase64(e.target.files?.[0] as File).then(base64 => {
+                            setImage(base64 as string);
+                          });
                         }}
                       />
                       +
@@ -310,7 +495,7 @@ export default function AddNewProduct() {
                   >
                     <Cropper
                       ref={cropperRef}
-                      src={src}
+                      src={coverSrc}
                       defaultSize={defaultSize}
                       defaultCoordinates={coordinates}
                       className={'cropper p-16 rounded-t-xl w-fit max-w-[1000px] h-[80vh] m-0'}
@@ -413,6 +598,22 @@ export default function AddNewProduct() {
             </div>
           </div>
         </div>
+        <AlertDialog open={blocker.state === 'blocked'}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>You have unsaved changes. Are you sure?</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => blocker.state === 'blocked' && blocker.reset()}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={() => blocker.state === 'blocked' && blocker.proceed()}>
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </ValidatedForm>
     </div>
   );

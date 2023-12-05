@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { cn } from '~/lib/utils';
+import { useField } from 'remix-validated-form';
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   name: string;
@@ -10,6 +11,8 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 
 const FormTextarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, name, label, sublabel, ...props }, ref) => {
+    const { error, getInputProps } = useField(name);
+
     return (
       <div>
         {label && (
@@ -31,7 +34,9 @@ const FormTextarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           )}
           ref={ref}
           {...props}
+          {...getInputProps({ id: name })}
         />
+        {error && <p className='text-sm text-additional-red dark:text-additional-red'>{error}</p>}
       </div>
     );
   }

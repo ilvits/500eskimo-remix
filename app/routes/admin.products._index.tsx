@@ -12,7 +12,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const q = url.searchParams.get('q');
   const { status, $skip, $top, orderBy, order, categoryId, tagId } = Object.fromEntries(url.searchParams.entries());
-  // console.log('q: ', q);
 
   const { products, total, groupProducts, categories, tags } = await getProducts({
     $top: Number($top) || 10,

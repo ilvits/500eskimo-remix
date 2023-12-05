@@ -71,36 +71,40 @@ model Products {
   categoryId      Int
   tagIds          String[]
   title           String
-  slug            String            @unique
+  slug            String
   description     String?
   conditions      String?
-  callories       String?
-  protein         String?
-  fat             String?
-  image           String?
+  callories       Int?
+  protein         Int?
+  fat             Int?
+  carbs           Int?
+  cover           String?
+  cover_public_id String?
   rating          Int?
   numReviews      Int?
   freeDelivery    Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @default(now())
-  tags            String[]
   productStatus   ProductStatus     @default(draft)
   productVariants ProductVariants[]
   category        Categories        @relation(fields: [categoryId], references: [id])
+  productImages   ProductImages[]
 }
 
 model ProductVariants {
-  id            Int          @id @default(autoincrement())
+  id            Int             @id @default(autoincrement())
+  name          String          @default("")
   productId     Int
   optionValueId Int
   quantity      Int
   price         Decimal
   sku           String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @default(now())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now())
   options       Options[]
-  product       Products     @relation(fields: [productId], references: [id])
-  optionValue   OptionValues @relation(fields: [optionValueId], references: [id])
+  product       Products        @relation(fields: [productId], references: [id])
+  optionValue   OptionValues    @relation(fields: [optionValueId], references: [id])
+  productImages ProductImages[]
 }
 
 model Options {
@@ -121,7 +125,17 @@ model OptionValues {
   unit            String
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @default(now())
-  ProductVariants ProductVariants[]
+  productVariants ProductVariants[]
+}
+
+model ProductImages {
+  id               Int              @id @default(autoincrement())
+  productId        Int
+  product          Products         @relation(fields: [productId], references: [id])
+  productVariantId Int?
+  productVariant   ProductVariants? @relation(fields: [productVariantId], references: [id])
+  imageUrl         String
+  publicId         String?
 }
 
 model Orders {

@@ -14,6 +14,17 @@ import { useEffect, useState } from 'react';
 import { PaginationBar } from '~/components/ui/custom/PaginationBar';
 import type { loader } from '~/routes/admin.products._index';
 
+interface ProductVariant {
+  id: number;
+  price: number;
+  optionValue: {
+    value: string;
+    unit: string;
+  };
+  sku: string;
+  quantity: number;
+}
+
 export default function AdminProductsLayout() {
   // const fetcher = useFetcher();
   const submit = useSubmit();
@@ -44,14 +55,6 @@ export default function AdminProductsLayout() {
   useEffect(() => {
     setQuery(q || '');
   }, [q]);
-  // console.log(existingParams);
-  // console.log('products: ', products);
-  // console.log('total: ', total);
-  // console.log('groupProducts: ', groupProducts);
-  // console.log('categoryId: ', categoryId);
-  // console.log(products[1]);
-  // console.log('tags: ', tags);
-  // console.log('tagId: ', tagId);
 
   return (
     <div className='mr-12'>
@@ -391,7 +394,7 @@ export default function AdminProductsLayout() {
                   {/* <TableCell className='w-10'>D</TableCell> */}
                   <TableCell>
                     <div className='flex space-x-2 items-center'>
-                      <img className='w-16 h-16 rounded-md' width={64} height={64} src={product.image} alt='' />
+                      <img className='w-16 h-16 rounded-md' width={64} height={64} src={product.cover || ''} alt='' />
                       <div className='flex flex-col space-y-0.5'>
                         <div className='text-sm font-bold'>{product.title}</div>
                         <div className='text-xs font-normal text-secondary-500 line-clamp-1'>{product.description}</div>
@@ -399,7 +402,7 @@ export default function AdminProductsLayout() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {product.productVariants.map(variant => {
+                    {product.productVariants.map((variant: ProductVariant) => {
                       return (
                         <div key={variant.id} className='flex items-center space-x-2.5'>
                           <span>${variant.price}</span>
@@ -425,7 +428,7 @@ export default function AdminProductsLayout() {
                       ))}
                   </TableCell>
                   <TableCell>
-                    {product.productVariants.map(variant => {
+                    {product.productVariants.map((variant: ProductVariant) => {
                       return (
                         <div key={variant.id} className='flex items-center w-full space-x-2'>
                           <div className='h-1 w-14 bg-secondary-100 relative rounded-full'>
@@ -445,7 +448,7 @@ export default function AdminProductsLayout() {
                         to={`/admin/products/${product.id}/edit`}
                         className='w-9 h-9 rounded-full bg-secondary-100 flex justify-center items-center'
                       >
-                        <img className='w-5 h-5' src='/static/assets/icons/pencil.svg' alt=''></img>
+                        <img className='w-5 h-5' src='/static/assets/icons/pencilBrown.svg' alt=''></img>
                       </Link>
                       <button className='w-9 h-9 rounded-full bg-secondary-100 flex justify-center items-center'>
                         <img className='w-5 h-5' src='/static/assets/icons/dots.svg' alt=''></img>
