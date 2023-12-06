@@ -42,7 +42,11 @@ import { useDropzone } from 'react-dropzone-esm';
 import { withZod } from '@remix-validated-form/with-zod';
 
 type ProductVariants = {
-  [key: string]: any;
+  [key: string]: string | number | undefined;
+};
+
+export type FormErrors = {
+  [key: string]: boolean;
 };
 
 const validator = withZod(productSchema);
@@ -69,15 +73,16 @@ export const action = async ({ request }: DataFunctionArgs) => {
 
   if (fieldValues.error) return validationError(fieldValues.error);
 
-  console.log('createProduct fieldValues: ', fieldValues);
+  console.log('fieldValues: ', fieldValues.data);
   const tagIds = formData.getAll('tagIds');
   const imagesData = formData.getAll('images');
-  const productVariants = JSON.parse(formData.get('productVariants') as string);
+  // const productVariants = JSON.parse(formData.get('productVariants') as string);
+  console.log('productVariants: ', JSON.stringify(formData.get('productVariants')));
 
   console.log('images: ', imagesData.length);
 
-  const createdProduct = await createProduct(fieldValues.data, imagesData, tagIds, productVariants);
-  console.log('createProduct createdProduct: ', createdProduct);
+  const createdProduct = await createProduct(fieldValues.data, imagesData, tagIds);
+  // console.log('createdProduct: ', createdProduct);
   if (!createdProduct) throw new Error('Something went wrong');
 
   return redirect('/admin/products?status=draft');
@@ -94,7 +99,7 @@ export default function AddNewProduct() {
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [dropZoneErrors, setDropZoneErrors] = useState<string[]>([]);
   const [productVariants, setProductVariants] = useState<ProductVariants[]>([]);
-  const [formErrors, setFormErrors] = useState<object>({});
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   const { tags, options } = useLoaderData<typeof loader>();
   const data = useActionData<typeof action>();
@@ -112,16 +117,14 @@ export default function AddNewProduct() {
     tagIds: [],
     productVariants: [
       {
-        name: null,
-        price: null,
-        sku: null,
-        quantity: null,
-        optionValueId: null,
+        name: '',
+        price: 0,
+        sku: '',
+        quantity: 0,
+        optionValueId: 0,
       },
     ],
   };
-
-  console.log('formErrors: ', formErrors);
 
   useEffect(() => {
     if (coverSrc) {
@@ -140,16 +143,21 @@ export default function AddNewProduct() {
   }, [image, coverSrc]);
 
   useEffect(() => {
-    image && setFormErrors((prevState: object) => ({ ...prevState, cover: null }));
+    image && setFormErrors((prevState: FormErrors) => ({ ...prevState, cover: false }));
   }, [image]);
 
   useEffect(() => {
-    productVariants.length > 0 && setFormErrors((prevState: object) => ({ ...prevState, productVariants: null }));
+    productVariants.length > 0 && setFormErrors((prevState: FormErrors) => ({ ...prevState, productVariants: false }));
   }, [productVariants]);
 
   useEffect(() => {
     productVariants.every(variant => variant.optionValueId) &&
-      setFormErrors((prevState: object) => ({ ...prevState, optionValueId: null }));
+      setFormErrors((prevState: FormErrors) => ({ ...prevState, optionValueId: false }));
+  }, [productVariants]);
+
+  useEffect(() => {
+    productVariants.every(variant => variant.name) &&
+      setFormErrors((prevState: FormErrors) => ({ ...prevState, optionName: false }));
   }, [productVariants]);
 
   const toBase64 = (file: File): Promise<string | ArrayBuffer | null> =>
@@ -243,7 +251,7 @@ export default function AddNewProduct() {
   } as DropzoneOptions);
 
   const addProductVariant = () => {
-    setProductVariants(prev => [...prev, { name: '', sku: '', price: 0, quantity: 0, optionValueId: null }]);
+    setProductVariants(prev => [...prev, { name: '', sku: '', price: 0, quantity: 0, optionValueId: undefined }]);
   };
 
   const removeProductVariant = (index: number) => {
@@ -255,13 +263,13 @@ export default function AddNewProduct() {
   };
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      productVariants.length !== 0 && currentLocation.pathname !== nextLocation.pathname
+      (productVariants.length !== 0 || files || image) && currentLocation.pathname !== nextLocation.pathname
   );
 
   return (
     <div>
       {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
-      <h1 className='text-2xl font-bold mb-8'>Add New Product</h1>
+      <h1 className='mb-8 text-2xl font-bold'>Add New Product</h1>
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
         <input type='hidden' name='categoryId' value={defaultValues.categoryId} />
         <input type='hidden' name='productStatus' value='draft' />
@@ -269,14 +277,14 @@ export default function AddNewProduct() {
         <input type='hidden' name='numReviews' value='0' />
         {image && <input type='hidden' name='cover' value={image} />}
         {files && files.map((file, i) => <input key={i} type='hidden' name='images' value={file} />)}
-        <input type='hidden' id='productVariants' name='productVariants' value={JSON.stringify(productVariants)} />
+        {/* <input type='hidden' id='productVariants' name='productVariants' value={JSON.stringify(productVariants)} /> */}
         {/* {selectedTags && selectedTags.map((tag, i) => <input key={i} type='hidden' name='tagIds' value={tag} />)} */}
-        <div className='flex w-full items-start space-x-12'>
+        <div className='flex items-start w-full space-x-12'>
           <div className='w-3/5 space-y-8'>
             <FormInput type='text' name='title' id='title' label='Title' />
             <FormTextarea className='mb-4' name='description' id='description' label='Description' />
             <section>
-              <div className='w-full flex items-center justify-between mb-2 '>
+              <div className='flex items-center justify-between w-full mb-2 '>
                 <h2
                   className={`text-lg font-bold ${formErrors.productVariants && '!text-additional-red animate-shake'}`}
                 >
@@ -285,16 +293,15 @@ export default function AddNewProduct() {
                 <button
                   type='button'
                   onClick={addProductVariant}
-                  className='w-9 h-9 bg-secondary-500 rounded-full text-white text-2xl flex items-center justify-center'
+                  className='flex items-center justify-center text-2xl text-white rounded-full w-9 h-9 bg-secondary-500'
                 >
                   +
                 </button>
               </div>
-
               {productVariants.length > 0 &&
                 (console.log('productVariants: ', productVariants[0]),
                 (
-                  <div className='flex flex-col gap-4 border-t border-primary-brown pt-4'>
+                  <div className='flex flex-col gap-4 pt-4 border-t border-primary-brown'>
                     {productVariants.map((variant, i) => (
                       <div key={i}>
                         <div className='space-y-4'>
@@ -333,12 +340,11 @@ export default function AddNewProduct() {
                                 <FormInput
                                   key={key}
                                   type={typeof value}
-                                  name={`variants.${i}.${key}`}
+                                  name={`productVariants[${i}].${key}`}
                                   sublabel={key}
                                   // defaultValue={value as string}
                                   // value={key in productVariants[i][key] ? productVariants[i][key] : ''}
                                   value={productVariants[i][key]}
-                                  // value={key in variant ? variant[key] : ''}
                                   onChange={e => {
                                     setProductVariants(prev =>
                                       prev.map((v, j) =>
@@ -362,10 +368,10 @@ export default function AddNewProduct() {
                                   <ProductOptionSelect
                                     label={option.name}
                                     aria-labelledby='option-label'
-                                    name={`variants.${i}.${option.id}.optionValueId`}
+                                    name={`productVariants[${i}].optionValueId`}
                                     options={option.optionValues}
                                     defaultValue={option.optionValues.find((o: any) => o.id === variant.optionValueId)}
-                                    errors={formErrors}
+                                    formErrors={formErrors}
                                     onChange={(option: any) => {
                                       setProductVariants(prev =>
                                         prev.map((v, j) =>
@@ -390,7 +396,7 @@ export default function AddNewProduct() {
             </section>
             <div className='space-y-4'>
               <FormInput type='text' name='conditions' label='Characteristics' sublabel='Shelf life and conditions' />
-              <div className='space-x-4 flex items-center'>
+              <div className='flex items-center space-x-4'>
                 <FormInput type='number' name='callories' sublabel='Callories' />
                 <FormInput type='number' name='protein' sublabel='Protein' />
                 <FormInput type='number' name='fat' sublabel='Fat' />
@@ -408,11 +414,14 @@ export default function AddNewProduct() {
                 type='submit'
                 className='disabled:cursor-not-allowed disabled:opacity-50'
                 disabled={navigation.state !== 'idle'}
-                onClick={() => {
-                  !image && setFormErrors(prev => ({ ...prev, cover: true }));
-                  !productVariants.length && setFormErrors(prev => ({ ...prev, productVariants: true }));
-                  !productVariants.every(variant => variant.optionValueId) &&
-                    setFormErrors(prev => ({ ...prev, productVariants: true, optionValueId: true }));
+                onClick={e => {
+                  if (!image || !productVariants.length || !productVariants.every(variant => variant.optionValueId)) {
+                    e.preventDefault();
+                    !image && setFormErrors(prev => ({ ...prev, cover: true }));
+                    !productVariants.length && setFormErrors(prev => ({ ...prev, productVariants: true }));
+                    !productVariants.every(variant => variant.optionValueId) &&
+                      setFormErrors(prev => ({ ...prev, productVariants: true, optionValueId: true }));
+                  }
                 }}
               >
                 Add Product
@@ -428,16 +437,17 @@ export default function AddNewProduct() {
               <div className='relative bg-[#F6F4EF] rounded-2xl w-full h-full flex items-center justify-center'>
                 <Dialog>
                   {image ? (
-                    <img className='relative w-full aspect-square object-cover rounded-xl' src={image} alt='' />
+                    <img className='relative object-cover w-full aspect-square rounded-xl' src={image} alt='' />
                   ) : (
                     <>
-                      <p
-                        className={`flex items-center justify-center w-full text-3xl text-secondary-500 h-full aspect-square transition-all duration-500 ${
+                      <label
+                        htmlFor='image'
+                        className={`flex items-center justify-center w-full cursor-pointer text-3xl text-secondary-500 h-full aspect-square transition-all duration-500 ${
                           formErrors.cover && '!text-additional-red animate-shake'
                         }`}
                       >
                         Upload cover please
-                      </p>
+                      </label>
                     </>
                   )}
                   {image ? (
@@ -453,7 +463,7 @@ export default function AddNewProduct() {
                         <DropdownMenuTrigger asChild>
                           <button
                             type='button'
-                            className=' w-9 h-9 bg-secondary-500 p-2 rounded-full flex items-center justify-center'
+                            className='flex items-center justify-center p-2 rounded-full w-9 h-9 bg-secondary-500'
                           >
                             <img src='/static/assets/icons/pencilWhite.svg' alt='' />
                           </button>
@@ -470,7 +480,7 @@ export default function AddNewProduct() {
                     </div>
                   ) : (
                     <label
-                      className='w-9 h-9 text-2xl bg-secondary-500 text-white p-2 rounded-full flex items-center justify-center cursor-pointer absolute bottom-2 right-2'
+                      className='absolute flex items-center justify-center p-2 text-2xl text-white rounded-full cursor-pointer w-9 h-9 bg-secondary-500 bottom-2 right-2'
                       htmlFor='image'
                     >
                       <input
@@ -531,7 +541,7 @@ export default function AddNewProduct() {
                       sizeRestrictions={percentsRestriction}
                       // onChange={onChange}
                     />
-                    <div className='p-4 flex items-center justify-between bg-background border-t border-secondary-300 rounded-b-xl'>
+                    <div className='flex items-center justify-between p-4 border-t bg-background border-secondary-300 rounded-b-xl'>
                       <Button variant='outline' onClick={resetCoordinates}>
                         Reset
                       </Button>
@@ -568,7 +578,7 @@ export default function AddNewProduct() {
                       </div>
                       <input name='images' className='hidden' {...getInputProps()} />
                       {dropZoneErrors && (
-                        <ul className='w-full mt-4 pl-4 text-sm text-additional-red dark:text-additional-red'>
+                        <ul className='w-full pl-4 mt-4 text-sm text-additional-red dark:text-additional-red'>
                           {dropZoneErrors.map(error => (
                             <li key={error}>{error}</li>
                           ))}
@@ -577,7 +587,7 @@ export default function AddNewProduct() {
                     </label>
                   </div>
                 </div>
-                <div className='grid-container grid grid-cols-3 gap-4 mt-4 w-full'>
+                <div className='grid w-full grid-cols-3 gap-4 mt-4 grid-container'>
                   {files.map(file => (
                     <div
                       key={file}
@@ -588,7 +598,7 @@ export default function AddNewProduct() {
                         className='trash absolute right-[5px] top-[3px] cursor-pointer opacity-0'
                         onClick={() => setFiles(prev => prev.filter(f => f !== file))}
                       >
-                        <img className='w-6 h-6 z-10' src='/static/assets/icons/trash.svg' alt='' />
+                        <img className='z-10 w-6 h-6' src='/static/assets/icons/trash.svg' alt='' />
                       </div>
                       <img className='max-w-24 max-h-24 rounded-sm bg-[#F6F4EF]' src={file} alt='' />
                     </div>

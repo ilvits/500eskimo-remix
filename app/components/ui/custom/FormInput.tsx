@@ -23,7 +23,7 @@ export function FormInput({ name, label, sublabel, onChange, ...rest }: InputPro
         </label>
       )}
       <input
-        className={`bg-input-bg border border-input rounded-lg focus:ring-primary-brown focus:border-input-focus block w-full p-2.5
+        className={`bg-input-bg border border-input rounded-lg focus:ring-primary-brown focus:border-input-focus block w-full p-2.5 h-11
                     placeholder:text-primary-brown/50 hover:border-input-hover focus-visible:outline-none 
                     dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500
                     ${error && '!border-red-500'}`}

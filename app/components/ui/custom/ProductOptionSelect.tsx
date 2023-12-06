@@ -1,18 +1,19 @@
-import Select from 'react-select';
+import type { FormErrors } from '~/routes/admin.products.new';
 import makeAnimated from 'react-select/animated';
 import { useField } from 'remix-validated-form';
+import Select, { type Props } from 'react-select';
 
 type MyInputProps = {
   name: string;
   label: string;
   options: string[];
-  defaultValue?: any;
-  errors?: object;
+  defaultValue?: string;
+  formErrors?: FormErrors;
   onChange: (option: any) => void;
 };
 
-export const ProductOptionSelect = ({ options, name, label, errors, onChange, defaultValue }: MyInputProps) => {
-  const { error, getInputProps } = useField(name) as any;
+export const ProductOptionSelect = ({ options, name, label, formErrors, onChange, defaultValue }: MyInputProps) => {
+  const { error, getInputProps } = useField(name);
 
   const animatedComponents = makeAnimated();
 
@@ -27,7 +28,7 @@ export const ProductOptionSelect = ({ options, name, label, errors, onChange, de
         name={`${label}`}
         placeholder={`Choose ${label}...`}
         defaultValue={defaultValue}
-        {...getInputProps({ id: name })}
+        {...getInputProps<Props>({ id: name })}
         getOptionLabel={(option: any) => `${option.value} ${option.unit && `(${option.unit})`}`}
         getOptionValue={(option: any) => option.id.toString()}
         isClearable={false}
@@ -46,7 +47,7 @@ export const ProductOptionSelect = ({ options, name, label, errors, onChange, de
         classNames={{
           control: () => {
             return `px-4 border border-input hover:border-input-hover rounded-lg bg-input-bg text-sm h-11 ${
-              errors?.optionValueId && !defaultValue && 'border-red-500'
+              formErrors && formErrors.optionValueId && !defaultValue && 'border-red-500'
             }`;
           },
           menu: () => 'bg-input-bg text-sm rounded-lg border border-input hover:border-input-hover mt-1',
@@ -57,7 +58,7 @@ export const ProductOptionSelect = ({ options, name, label, errors, onChange, de
         }}
         onChange={onChange}
       />
-      {errors?.optionValueId && !defaultValue && (
+      {formErrors && Object.keys(formErrors).findIndex(key => key === 'optionValueId') > -1 && !defaultValue && (
         <span className='text-sm text-additional-red'>Please select an option</span>
       )}
       {error && <span className='text-sm text-additional-red'>{error}</span>}

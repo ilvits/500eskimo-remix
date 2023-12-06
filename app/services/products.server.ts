@@ -119,7 +119,7 @@ export const getProducts = async ({
   invariant(result, 'Unable to get all products');
   return { total: result[0], products: result[1], groupProducts, categories: result[3], tags: result[4] };
 };
-export const createProduct = async (data: any, images: any, tagIds: any, productVariants: any) => {
+export const createProduct = async (data: any, images: any, tagIds: any) => {
   data.slug = slugify(data.title);
   data.tagIds = tagIds;
 
@@ -169,7 +169,7 @@ export const createProduct = async (data: any, images: any, tagIds: any, product
         }),
       },
       productVariants: {
-        create: productVariants,
+        create: data.productVariants,
       },
     },
   });

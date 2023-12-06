@@ -19,10 +19,15 @@ export const productSchema = z.object({
   carbs: z.coerce.number().optional(),
   ProductStatus: z.enum(['published', 'draft', 'unpublished']).default('published').optional(),
   tagIds: z.string().or(z.array(z.string())).optional(),
-  productVariants: z
-    .string()
-    .min(3, 'Must contain at least 3 chars')
-    .transform(JSON.parse as any),
+  productVariants: z.array(
+    z.object({
+      name: z.string().min(3, 'Must contain at least 3 chars').optional(),
+      price: z.coerce.number().default(0).optional(),
+      sku: z.string().optional().optional(),
+      quantity: z.coerce.number().default(0).optional(),
+      optionValueId: z.coerce.number({ required_error: 'Option value is required' }),
+    })
+  ),
 });
 
 export type AddProduct = z.infer<typeof productSchema>;
