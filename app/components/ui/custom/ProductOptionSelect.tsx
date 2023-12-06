@@ -19,7 +19,7 @@ export const ProductOptionSelect = ({ options, name, label, formErrors, onChange
 
   return (
     <div>
-      <label id={`${label}-label`} className='font-bold mb-4 block' htmlFor={name}>
+      <label id={`${label}-label`} className='block mb-4 font-bold' htmlFor={name}>
         {label}
       </label>
       <Select
@@ -35,14 +35,6 @@ export const ProductOptionSelect = ({ options, name, label, formErrors, onChange
         // closeMenuOnSelect={false}
         components={animatedComponents}
         unstyled={true}
-        styles={{
-          option: (styles, { data }: any) => {
-            return {
-              ...styles,
-              '&:hover': { backgroundColor: data.color || '#F8E9CC', color: 'white' },
-            };
-          },
-        }}
         classNamePrefix={'options-select'}
         classNames={{
           control: () => {
@@ -52,7 +44,7 @@ export const ProductOptionSelect = ({ options, name, label, formErrors, onChange
           },
           menu: () => 'bg-input-bg text-sm rounded-lg border border-input hover:border-input-hover mt-1',
           menuList: () => 'space-y-2 p-2',
-          option: () => 'p-2 rounded-lg text-foreground text-sm',
+          option: () => 'p-2 rounded-lg hover:bg-input text-foreground  text-sm',
           valueContainer: () => 'gap-2',
           dropdownIndicator: () => 'text-secondary-500 h-4 w-4',
         }}

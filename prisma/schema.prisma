@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearch"]
@@ -89,6 +86,7 @@ model Products {
   productVariants ProductVariants[]
   category        Categories        @relation(fields: [categoryId], references: [id])
   productImages   ProductImages[]
+  orderItems      OrderItems[]
 }
 
 model ProductVariants {
@@ -105,6 +103,10 @@ model ProductVariants {
   product       Products        @relation(fields: [productId], references: [id])
   optionValue   OptionValues    @relation(fields: [optionValueId], references: [id])
   productImages ProductImages[]
+  orderItems    OrderItems[]
+
+  @@index([productId, optionValueId], map: "product_variant_idx")
+  @@index([name], map: "product_variant_name_idx")
 }
 
 model Options {
@@ -148,31 +150,35 @@ model Orders {
   delivered      Boolean
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now())
-  OrderItems     OrderItems[]
-  Customers      Customers?   @relation(fields: [customersId], references: [id])
+  orderItems     OrderItems[]
+  customers      Customers?   @relation(fields: [customersId], references: [id])
   customersId    Int?
 
+  @@index([customersId], map: "customer_id_idx")
+  @@index([status, delivered], map: "status_delivered_idx")
   @@index([status], map: "status_idx")
   @@index([total], map: "total_idx")
-  @@index([userId], map: "user_id_idx")
-  @@index([deliveredAt], map: "delivered_at_idx")
-  @@index([delivered], map: "delivered_idx")
-  @@index([deliveryMethod], map: "delivery_method_idx")
   @@index([createdAt], map: "created_at_idx")
+  @@index([updatedAt], map: "updated_at_idx")
 }
 
 model OrderItems {
-  id        Int      @id @default(autoincrement())
-  orderId   Int
-  productId Int
-  order     Orders   @relation(fields: [orderId], references: [id])
-  quantity  Int
-  price     Decimal
-  createdAt DateTime @default(now())
+  id               Int             @id @default(autoincrement())
+  orderId          Int
+  productsId       Int?
+  Products         Products?       @relation(fields: [productsId], references: [id])
+  productVariantId Int
+  productVariant   ProductVariants @relation(fields: [productVariantId], references: [id])
+  order            Orders          @relation(fields: [orderId], references: [id])
+  quantity         Int
+  price            Decimal
+  createdAt        DateTime        @default(now())
 
   @@index([orderId], map: "order_id_idx")
-  @@index([productId], map: "product_id_idx")
+  @@index([productsId], map: "product_id_idx")
+  @@index([productVariantId], map: "product_variant_id_idx")
   @@index([quantity], map: "quantity_idx")
+  @@index([price], map: "price_idx")
 }
 
 model Messages {
@@ -184,6 +190,6 @@ model Messages {
   phone       String
   body        String
   createdAt   DateTime   @default(now())
-  Customers   Customers? @relation(fields: [customersId], references: [id])
+  customers   Customers? @relation(fields: [customersId], references: [id])
   customersId Int?
 }

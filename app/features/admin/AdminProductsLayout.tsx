@@ -4,15 +4,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '~/components/ui/custom/dropdown-menu';
-import { Form, Link, useLoaderData, useNavigation, useSearchParams, useSubmit } from '@remix-run/react';
+import { Form, Link, useLoaderData, useNavigate, useNavigation, useSearchParams, useSubmit } from '@remix-run/react';
 import { PiCaretDownBold, PiSpinnerLight } from 'react-icons/pi/index.js';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { TbSortAscendingNumbers, TbSortDescendingNumbers } from 'react-icons/tb/index.js';
 import { useEffect, useState } from 'react';
 
+import { Button } from '~/components/ui/button';
 import { PaginationBar } from '~/components/ui/custom/PaginationBar';
 import type { loader } from '~/routes/admin.products._index';
+import numeral from 'numeral';
 
 interface ProductVariant {
   id: number;
@@ -55,18 +57,37 @@ export default function AdminProductsLayout() {
   useEffect(() => {
     setQuery(q || '');
   }, [q]);
-
+  const navigate = useNavigate();
   return (
     <div className='mr-12'>
-      <div className='flex justify-between items-start pb-6'>
-        <h1 className='text-2xl font-bold mb-4'>Products</h1>
-        <Link
+      <div className='flex items-start justify-between pb-6'>
+        <h1 className='mb-4 text-2xl font-bold'>Products</h1>
+        {/* <Link
           to='/admin/products/new'
-          className='px-8 py-2 rounded-full bg-primary font-medium text-base text-white flex items-center space-x-1'
-        >
-          <img src='/static/assets/icons/plus.svg' alt='' />
-          <span>Add new product</span>
-        </Link>
+          className='flex items-center px-8 py-2 space-x-1 text-base font-medium text-white rounded-full bg-primary'
+        > */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className='py-2 pl-8 pr-6 space-x-2'>
+              <span>Add new product</span>
+              <PiCaretDownBold className='w-4 h-4' />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='end'>
+            {categories.map(category => (
+              <DropdownMenuItem
+                className='justify-end cursor-pointer'
+                key={category.id}
+                onClick={() => {
+                  navigate(`/admin/products/new?categoryId=${category.id}`);
+                }}
+              >
+                {category.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {/* </Link> */}
       </div>
       <Tabs id='product-status--tabs' defaultValue='published' className='mb-8'>
         <TabsList className=' rounded-full bg-white space-x-2.5'>
@@ -156,7 +177,7 @@ export default function AdminProductsLayout() {
         </TabsList>
       </Tabs>
       <section id='filter-list'>
-        <div className='flex items-center space-x-2 my-4'>
+        <div className='flex items-center my-4 space-x-2'>
           {categoryId && (
             <Form method='get' preventScrollReset>
               <>
@@ -166,7 +187,7 @@ export default function AdminProductsLayout() {
               </>
               <button
                 type='submit'
-                className='flex items-center space-x-2 pl-3 pr-2 py-1 rounded-md text-primary-brown bg-secondary-100 border border-primary-brown/50'
+                className='flex items-center py-1 pl-3 pr-2 space-x-2 border rounded-md text-primary-brown bg-secondary-100 border-primary-brown/50'
               >
                 <div>category: {categories.find(cat => cat.id.toString() === categoryId)?.name}</div>
                 <img src='/static/assets/icons/cross.svg' alt='' />
@@ -182,7 +203,7 @@ export default function AdminProductsLayout() {
               </>
               <button
                 type='submit'
-                className='flex items-center space-x-2 pl-3 pr-2 py-1 rounded-md text-primary-brown bg-secondary-100 border border-primary-brown/50'
+                className='flex items-center py-1 pl-3 pr-2 space-x-2 border rounded-md text-primary-brown bg-secondary-100 border-primary-brown/50'
               >
                 <div>tag: {tags.find(tag => tag.id.toString() === tagId)?.name}</div>
                 <img src='/static/assets/icons/cross.svg' alt='' />
@@ -191,7 +212,7 @@ export default function AdminProductsLayout() {
           )}
         </div>
       </section>
-      <section id='products_list' className='rounded-xl border border-secondary-100'>
+      <section id='products_list' className='border rounded-xl border-secondary-100'>
         <Table>
           <TableHeader>
             <TableRow className='h-[60px] hover:bg-secondary-50 bg-secondary-50 [&>th]:font-semibold border-secondary-100'>
@@ -231,7 +252,7 @@ export default function AdminProductsLayout() {
                     <img
                       src='/static/assets/icons/searchSmall.svg'
                       hidden={searching}
-                      className='fill-primary-brown absolute left-1 top-1 w-4 h-4'
+                      className='absolute w-4 h-4 fill-primary-brown left-1 top-1'
                       alt=''
                     />
                     <PiSpinnerLight
@@ -254,7 +275,7 @@ export default function AdminProductsLayout() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align='start'
-                      className='rounded-md shadow-none bg-secondary-50 border border-secondary-100'
+                      className='border rounded-md shadow-none bg-secondary-50 border-secondary-100'
                     >
                       <Form method='get' preventScrollReset>
                         <>
@@ -310,13 +331,13 @@ export default function AdminProductsLayout() {
                       return <input key={key} type='hidden' name={key} value={value} />;
                     })}
                   </>
-                  <button className='w-full flex items-center space-x-2' type='submit'>
+                  <button className='flex items-center w-full space-x-2' type='submit'>
                     <span>Price</span>
                     {orderBy === 'price' &&
                       (order === 'desc' ? (
-                        <TbSortDescendingNumbers className='h-4 w-4' />
+                        <TbSortDescendingNumbers className='w-4 h-4' />
                       ) : (
-                        <TbSortAscendingNumbers className='h-4 w-4' />
+                        <TbSortAscendingNumbers className='w-4 h-4' />
                       ))}
                   </button>
                 </Form>
@@ -338,7 +359,7 @@ export default function AdminProductsLayout() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align='start'
-                      className='rounded-md shadow-none bg-secondary-50 border border-secondary-100'
+                      className='border rounded-md shadow-none bg-secondary-50 border-secondary-100'
                     >
                       <Form method='get' preventScrollReset>
                         <>
@@ -384,7 +405,7 @@ export default function AdminProductsLayout() {
                 </div>
               </TableHead>
               <TableHead className='w-32'>Stock</TableHead>
-              <TableHead className='rounded-tr-xl text-center w-28'></TableHead>
+              <TableHead className='text-center rounded-tr-xl w-28'></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -393,8 +414,14 @@ export default function AdminProductsLayout() {
                 <TableRow key={product.id} className='border-secondary-100 hover:bg-[#fffdf8]'>
                   {/* <TableCell className='w-10'>D</TableCell> */}
                   <TableCell>
-                    <div className='flex space-x-2 items-center'>
-                      <img className='w-16 h-16 rounded-md' width={64} height={64} src={product.cover || ''} alt='' />
+                    <div className='flex items-center space-x-2'>
+                      <img
+                        className='w-16 h-16 rounded-md shrink-0'
+                        width={64}
+                        height={64}
+                        src={product.cover || '/static/assets/no-image.jpg'}
+                        alt=''
+                      />
                       <div className='flex flex-col space-y-0.5'>
                         <div className='text-sm font-bold'>{product.title}</div>
                         <div className='text-xs font-normal text-secondary-500 line-clamp-1'>{product.description}</div>
@@ -405,7 +432,7 @@ export default function AdminProductsLayout() {
                     {product.productVariants.map((variant: ProductVariant) => {
                       return (
                         <div key={variant.id} className='flex items-center space-x-2.5'>
-                          <span>${variant.price}</span>
+                          <span>{numeral(variant.price).format('$0,0.00')}</span>
                           <span>/</span>
                           <img src='/static/assets/icons/jar_big.svg' alt='' />
                           <span className='text-xs font-normal text-secondary-500 whitespace-nowrap'>
@@ -418,10 +445,11 @@ export default function AdminProductsLayout() {
                   <TableCell className='grid gap-1'>
                     <div className='w-0 h-0 bg-secondary-500'></div>
                     {product.tags &&
-                      product.tags.map((tag: any, index) => (
+                      product.tags.map((tag, i) => (
                         <div
-                          key={index}
-                          className={`text-xs rounded-full bg-[${tag.color}] px-2 py-1 w-fit text-white`}
+                          key={i}
+                          className={`text-xs rounded-full px-2 py-1 w-fit text-white`}
+                          style={{ backgroundColor: tag.color }}
                         >
                           {tag.name}
                         </div>
@@ -431,9 +459,9 @@ export default function AdminProductsLayout() {
                     {product.productVariants.map((variant: ProductVariant) => {
                       return (
                         <div key={variant.id} className='flex items-center w-full space-x-2'>
-                          <div className='h-1 w-14 bg-secondary-100 relative rounded-full'>
+                          <div className='relative h-1 rounded-full w-14 bg-secondary-100'>
                             <div
-                              className='h-1 bg-additional-green-100 absolute top-0 left-0 w-1/2 rounded-full'
+                              className='absolute top-0 left-0 w-1/2 h-1 rounded-full bg-additional-green-100'
                               // style={{ width: `${product.stock}%` }}
                             ></div>
                           </div>
@@ -446,11 +474,11 @@ export default function AdminProductsLayout() {
                     <div className='flex items-center space-x-2'>
                       <Link
                         to={`/admin/products/${product.id}/edit`}
-                        className='w-9 h-9 rounded-full bg-secondary-100 flex justify-center items-center'
+                        className='flex items-center justify-center rounded-full w-9 h-9 bg-secondary-100'
                       >
                         <img className='w-5 h-5' src='/static/assets/icons/pencilBrown.svg' alt=''></img>
                       </Link>
-                      <button className='w-9 h-9 rounded-full bg-secondary-100 flex justify-center items-center'>
+                      <button className='flex items-center justify-center rounded-full w-9 h-9 bg-secondary-100'>
                         <img className='w-5 h-5' src='/static/assets/icons/dots.svg' alt=''></img>
                       </button>
                     </div>
@@ -468,7 +496,7 @@ export default function AdminProductsLayout() {
         </Table>
       </section>
       {products.length > 0 && (
-        <section id='pagination' className='my-12 flex justify-between text-xs font-medium'>
+        <section id='pagination' className='flex justify-between my-12 text-xs font-medium'>
           <PaginationBar total={total} />
           <div className='flex items-center space-x-2'>
             <div>Products per page: </div>

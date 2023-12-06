@@ -115,6 +115,7 @@ export const getProducts = async ({
       count: group._count,
     };
   });
+  // console.log('products: ', result[1][2]);
 
   invariant(result, 'Unable to get all products');
   return { total: result[0], products: result[1], groupProducts, categories: result[3], tags: result[4] };
@@ -203,6 +204,9 @@ export const getOptions = async () => {
           id: true,
           value: true,
           unit: true,
+        },
+        orderBy: {
+          value: 'asc',
         },
       },
     },

@@ -18,12 +18,12 @@ module.exports = {
         'input-hover': '#e9bd66',
         'input-focus': '#4a2502',
         ring: '#fff',
-        background: 'var(--background)',
-        foreground: 'hsl(var(--foreground))',
+        background: '#fff',
+        foreground: '#4a2502',
         primary: {
           DEFAULT: '#da9100',
           brown: '#4a2502',
-          foreground: 'hsl(var(--primary-foreground))',
+          foreground: '#4a2502',
         },
         secondary: {
           DEFAULT: '#f8e9cc',

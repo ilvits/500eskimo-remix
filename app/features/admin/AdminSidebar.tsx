@@ -1,13 +1,14 @@
 import { NavLink, useLoaderData } from '@remix-run/react';
-
+import numeral from 'numeral';
 import type { loader } from '~/routes/admin';
 
 export function AdminSidebar() {
   const { ordersCount, messagesCount } = useLoaderData<typeof loader>();
-
+  const ordersCountFormatted = numeral(ordersCount).format('0.0a');
+  const messagesCountFormatted = numeral(messagesCount).format('0.0a');
   return (
     <div className='bg-white'>
-      <nav id='sidebar' className='w-[188px] pr-8 flex flex-col space-y-1'>
+      <nav id='sidebar' className='w-[240px] pr-8 flex flex-col space-y-1'>
         <NavLink
           to='dashboard'
           className='flex items-center space-x-2.5 px-2 py-2.5 rounded-lg [&.active]:bg-secondary-50'
@@ -31,7 +32,7 @@ export function AdminSidebar() {
             <span>Orders</span>
           </div>
           {ordersCount > 0 ? (
-            <div className='w-4 h-4 flex items-center justify-center font-semibold'>{ordersCount}</div>
+            <div className='flex items-center justify-center w-4 h-4 font-semibold'>{ordersCountFormatted}</div>
           ) : null}
         </NavLink>
         <NavLink
@@ -43,7 +44,7 @@ export function AdminSidebar() {
             <span>Messages</span>
           </div>
           {messagesCount > 0 ? (
-            <div className='w-4 h-4 flex items-center justify-center font-semibold'>{messagesCount}</div>
+            <div className='flex items-center justify-center w-4 h-4 font-semibold'>{messagesCountFormatted}</div>
           ) : null}
         </NavLink>
       </nav>

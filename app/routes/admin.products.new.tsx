@@ -23,7 +23,7 @@ import type { DropzoneOptions, FileRejection } from 'react-dropzone';
 import { ValidatedForm, validationError } from 'remix-validated-form';
 import { createProduct, getAllCategories, getAllTags, getOptions } from '~/services/products.server';
 import { json, redirect } from '@remix-run/node';
-import { useActionData, useBlocker, useLoaderData, useNavigation } from '@remix-run/react';
+import { useActionData, useBlocker, useLoaderData, useNavigation, useSearchParams } from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { AddProduct } from '~/common/productSchema';
@@ -73,16 +73,15 @@ export const action = async ({ request }: DataFunctionArgs) => {
 
   if (fieldValues.error) return validationError(fieldValues.error);
 
-  console.log('fieldValues: ', fieldValues.data);
   const tagIds = formData.getAll('tagIds');
   const imagesData = formData.getAll('images');
-  // const productVariants = JSON.parse(formData.get('productVariants') as string);
-  console.log('productVariants: ', JSON.stringify(formData.get('productVariants')));
 
-  console.log('images: ', imagesData.length);
+  // const productVariants = JSON.parse(formData.get('productVariants') as string);
+  // console.log('fieldValues: ', fieldValues.data);
+  // console.log('productVariants: ', JSON.stringify(formData.get('productVariants')));
+  // console.log('images: ', imagesData.length);
 
   const createdProduct = await createProduct(fieldValues.data, imagesData, tagIds);
-  // console.log('createdProduct: ', createdProduct);
   if (!createdProduct) throw new Error('Something went wrong');
 
   return redirect('/admin/products?status=draft');
@@ -103,9 +102,11 @@ export default function AddNewProduct() {
 
   const { tags, options } = useLoaderData<typeof loader>();
   const data = useActionData<typeof action>();
+  const [searchParams] = useSearchParams();
+  const categoryId = Number(searchParams.get('categoryId')) || 1;
 
   const defaultValues: AddProduct = {
-    categoryId: 1,
+    categoryId: categoryId,
     title: '',
     description: 'Cubes test description',
     cover: '',
@@ -271,7 +272,7 @@ export default function AddNewProduct() {
       {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
       <h1 className='mb-8 text-2xl font-bold'>Add New Product</h1>
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
-        <input type='hidden' name='categoryId' value={defaultValues.categoryId} />
+        <input type='hidden' name='categoryId' value={categoryId} />
         <input type='hidden' name='productStatus' value='draft' />
         <input type='hidden' name='rating' value='0' />
         <input type='hidden' name='numReviews' value='0' />
