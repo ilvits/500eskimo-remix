@@ -155,7 +155,6 @@ model Orders {
   customersId    Int?
 
   @@index([customersId], map: "customer_id_idx")
-  @@index([status, delivered], map: "status_delivered_idx")
   @@index([status], map: "status_idx")
   @@index([total], map: "total_idx")
   @@index([createdAt], map: "created_at_idx")

@@ -6,7 +6,7 @@ export const getAllOrdersCount = async () => {
   return result;
 };
 
-export const getAllOrders = async () => {
+export const getAllOrders = async (status: string) => {
   const result = await prisma.orders.findMany({
     include: {
       _count: {
@@ -29,6 +29,14 @@ export const getAllOrders = async () => {
           },
         },
       },
+    },
+    where: {
+      status:
+        status === 'all'
+          ? {
+              not: 'closed',
+            }
+          : status,
     },
     orderBy: [
       {
@@ -146,6 +154,12 @@ export const getOrderHits = async () => {
               name: true,
             },
           },
+        },
+      },
+      optionValue: {
+        select: {
+          value: true,
+          unit: true,
         },
       },
     },

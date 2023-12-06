@@ -214,35 +214,31 @@ export default function AdminDashboard() {
       <div className='flex flex-col w-2/6 pr-12 space-y-10'>
         <section id='sales_hits'>
           <h1 className='mb-2 text-xl font-extrabold'>Sale Hits</h1>
-          {orderHits.map((product, index) => (
+          {orderHits.map((productVariant, index) => (
             <Card key={index} className='border-0 shadow-none'>
               <CardContent className='text-[#372400] py-4 px-0'>
                 <div className='flex flex-row items-center space-x-4'>
                   <img
                     className='w-12 h-12 rounded-sm shrink-0'
-                    src={product.product.cover || '/static/assets/no-image.jpg'}
+                    src={productVariant.product.cover || '/static/assets/no-image.jpg'}
                     alt=''
                   />
                   <div className='flex flex-col grow'>
-                    <div className='text-xs font-normal text-secondary-500'>{product.product.category.name}</div>
-                    <div className='flex flex-row items-center space-x-1 text-sm font-semibold'>
-                      {product.name.charAt(0).toUpperCase() + product.name.slice(1)}
+                    <div className='text-xs font-normal text-secondary-500'>{productVariant.product.category.name}</div>
+                    <div className='flex flex-row items-center space-x-1 text-sm font-semibold capitalize'>
+                      {productVariant.product.title}
                     </div>
-                    <div className='text-xs font-bold'>
-                      {numeral(product.price).format('$0,0.00')} / <span className='text-secondary-500'>250 g.</span>
+                    <div className='space-x-0.5 text-xs font-bold'>
+                      <span>{numeral(productVariant.price).format('$0,0.00')}</span>
+                      <span>/</span>
+                      <span className='text-secondary-500'>
+                        {productVariant.optionValue.value} {productVariant.optionValue.unit}
+                      </span>
                     </div>
                   </div>
                   <div className='flex flex-col space-y-1 text-sm text-right'>
-                    <div className='font-semibold'>
-                      <NumericFormat
-                        displayType='text'
-                        thousandSeparator=' '
-                        decimalScale={0}
-                        prefix={'$'}
-                        value={product.price}
-                      />
-                    </div>
-                    <div>x {product._count.orderItems}</div>
+                    <div className='font-semibold'>{numeral(productVariant.price).format('$0,0')}</div>
+                    <div>x {productVariant._count.orderItems}</div>
                   </div>
                 </div>
               </CardContent>
