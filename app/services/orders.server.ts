@@ -6,49 +6,82 @@ export const getAllOrdersCount = async () => {
   return result;
 };
 
-export const getAllOrders = async (status: string) => {
-  const result = await prisma.orders.findMany({
-    include: {
-      _count: {
-        select: {
-          orderItems: true,
+export const getAllOrders = async (status: string, orderBy: string, order: string, $top: string, $skip: string) => {
+  const result = await prisma.$transaction([
+    prisma.orders.findMany({
+      include: {
+        _count: {
+          select: {
+            orderItems: true,
+          },
         },
-      },
-      customers: {
-        select: {
-          username: true,
-          email: true,
+        customers: {
+          select: {
+            username: true,
+            email: true,
+          },
         },
-      },
-      orderItems: {
-        include: {
-          productVariant: {
-            include: {
-              product: true,
+        orderItems: {
+          include: {
+            productVariant: {
+              include: {
+                product: true,
+              },
             },
           },
         },
       },
-    },
-    where: {
-      status:
-        status === 'all'
-          ? {
-              not: 'closed',
-            }
-          : status,
-    },
-    orderBy: [
-      {
-        createdAt: 'desc',
+      where: {
+        status:
+          status === 'all'
+            ? {
+                not: '',
+              }
+            : status === 'active'
+            ? {
+                not: 'closed',
+              }
+            : status,
       },
-    ],
-    take: 10,
+      orderBy: [
+        {
+          [orderBy ? orderBy : 'createdAt']: order ? order : 'desc',
+        },
+      ],
+      skip: $skip ? Number($skip) : 0,
+      take: $top ? Number($top) : 10,
+    }),
+    prisma.orders.groupBy({
+      by: ['status'],
+      _count: true,
+      orderBy: {
+        status: 'asc',
+      },
+    }),
+    prisma.orders.count({
+      where: {
+        status:
+          status === 'all'
+            ? {
+                not: '',
+              }
+            : status === 'active'
+            ? {
+                not: 'closed',
+              }
+            : status,
+      },
+    }),
+  ]);
+  // console.log('result: ', result);
+  const groupOrders = result[1].map(group => {
+    return {
+      status: group.status,
+      count: group._count,
+    };
   });
-  // console.log('result: ', result[0]);
-
   invariant(result, 'Unable to get all orders');
-  return result;
+  return { orders: result[0], groupOrders, total: result[2] };
 };
 
 export const getOrders = async (limit = 10) => {
@@ -82,7 +115,7 @@ export const getOrders = async (limit = 10) => {
     ],
     take: limit,
   });
-  console.log('result: ', result[0]);
+  // console.log('result: ', result[0]);
 
   invariant(result, 'Unable to get orders');
   return result;
@@ -117,7 +150,7 @@ export const getAllOrdersOnlyTotalsByDateRange = async (startDate: Date, endDate
       },
     ],
   });
-  console.log('result: ', result.length);
+  // console.log('result: ', result.length);
 
   invariant(result, 'Unable to get all orders');
   return result;

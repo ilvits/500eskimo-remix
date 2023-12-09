@@ -16,25 +16,7 @@ import { PaginationBar } from '~/components/ui/custom/PaginationBar';
 import type { loader } from '~/routes/admin.products._index';
 import numeral from 'numeral';
 
-interface ProductVariant {
-  id: number;
-  price: number;
-  optionValue: {
-    value: string;
-    unit: string;
-  };
-  sku: string;
-  quantity: number;
-}
-
 export default function AdminProductsLayout() {
-  // const fetcher = useFetcher();
-  const submit = useSubmit();
-  const navigation = useNavigation();
-
-  const productsOnPageOptions = ['10', '25', '50', '100'];
-
-  const loaderData = useLoaderData<typeof loader>();
   const {
     status = 'published',
     groupProducts,
@@ -48,24 +30,47 @@ export default function AdminProductsLayout() {
     tags,
     tagId = '',
     q,
-  } = loaderData;
-  const [searchParams] = useSearchParams();
-  const existingParams = Array.from(searchParams.entries());
-  const searching = navigation.location && new URLSearchParams(navigation.location.search).has('q');
+  } = useLoaderData<typeof loader>();
+
   const [query, setQuery] = useState(q);
+
+  const [searchParams] = useSearchParams();
+  const navigation = useNavigation();
+  const navigate = useNavigate();
+  const submit = useSubmit();
+
+  const productsOnPageOptions = ['10', '25', '50', '100'];
+
+  const searching = navigation.location && new URLSearchParams(navigation.location.search).has('q');
+  const existingParams = Array.from(searchParams.entries());
 
   useEffect(() => {
     setQuery(q || '');
   }, [q]);
-  const navigate = useNavigate();
+
+  const deleteProduct = async (id: number) => {
+    const response = confirm('Please confirm you want to delete this product.');
+    if (response) {
+      const deleteResponse = await fetch(`/admin/products/${id}/delete`, { method: 'POST' });
+      if (deleteResponse.ok) {
+        navigate('/admin/products');
+      } else {
+        if (confirm('Unable to delete product with orders. Move a product to the archive?')) {
+          const archiveResponse = await fetch(`/admin/products/${id}/archive`, { method: 'POST' });
+          if (archiveResponse.ok) {
+            navigate('/admin/products');
+          } else {
+            alert('Unable to archive product');
+          }
+        }
+      }
+    }
+  };
+
   return (
     <div className='mr-12'>
       <div className='flex items-start justify-between pb-6'>
         <h1 className='mb-4 text-2xl font-bold'>Products</h1>
-        {/* <Link
-          to='/admin/products/new'
-          className='flex items-center px-8 py-2 space-x-1 text-base font-medium text-white rounded-full bg-primary'
-        > */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button className='py-2 pl-8 pr-6 space-x-2'>
@@ -106,8 +111,7 @@ export default function AdminProductsLayout() {
             <TabsTrigger
               type='submit'
               value='published'
-              className='px-6 py-1.5 rounded-full data-[state=active]:text-primary-brown text-secondary-500 
-              bg-white border border-primary-brown/50 data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
+              className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
               data-state={status === 'published' ? 'active' : ''}
             >
               Published ({(groupProducts.find(group => group.name === 'published')?.count || 0).toString()})
@@ -126,7 +130,7 @@ export default function AdminProductsLayout() {
             <TabsTrigger
               type='submit'
               value='draft'
-              className='px-6 py-1.5 rounded-full data-[state=active]:text-primary-brown text-secondary-500 bg-white border border-primary-brown/50 data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
+              className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
               data-state={status === 'draft' ? 'active' : ''}
             >
               Drafts ({(groupProducts.find(group => group.name === 'draft')?.count || 0).toString()})
@@ -147,7 +151,7 @@ export default function AdminProductsLayout() {
             <TabsTrigger
               type='submit'
               value='hidden'
-              className='px-6 py-1.5 rounded-full data-[state=active]:text-primary-brown text-secondary-500 bg-white border border-primary-brown/50 data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
+              className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
               data-state={status === 'hidden' ? 'active' : ''}
             >
               Hidden ({(groupProducts.find(group => group.name === 'hidden')?.count || 0).toString()})
@@ -168,7 +172,7 @@ export default function AdminProductsLayout() {
             <TabsTrigger
               type='submit'
               value='archived'
-              className='px-6 py-1.5 rounded-full data-[state=active]:text-primary-brown text-secondary-500 bg-white border border-primary-brown/50 data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
+              className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
               data-state={status === 'archived' ? 'active' : ''}
             >
               Archived ({(groupProducts.find(group => group.name === 'archived')?.count || 0).toString()})
@@ -429,7 +433,7 @@ export default function AdminProductsLayout() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {product.productVariants.map((variant: ProductVariant) => {
+                    {product.productVariants.map(variant => {
                       return (
                         <div key={variant.id} className='flex items-center space-x-2.5'>
                           <span>{numeral(variant.price).format('$0,0.00')}</span>
@@ -456,7 +460,7 @@ export default function AdminProductsLayout() {
                       ))}
                   </TableCell>
                   <TableCell>
-                    {product.productVariants.map((variant: ProductVariant) => {
+                    {product.productVariants.map(variant => {
                       return (
                         <div key={variant.id} className='flex items-center w-full space-x-2'>
                           <div className='relative h-1 rounded-full w-14 bg-secondary-100'>
@@ -478,9 +482,24 @@ export default function AdminProductsLayout() {
                       >
                         <img className='w-5 h-5' src='/static/assets/icons/pencilBrown.svg' alt=''></img>
                       </Link>
-                      <button className='flex items-center justify-center rounded-full w-9 h-9 bg-secondary-100'>
-                        <img className='w-5 h-5' src='/static/assets/icons/dots.svg' alt=''></img>
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className='flex items-center justify-center rounded-full w-9 h-9 bg-secondary-100'>
+                            <img className='w-5 h-5' src='/static/assets/icons/dots.svg' alt='' />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='end' className='min-w-0'>
+                          <DropdownMenuItem className='justify-end w-full whitespace-nowrap focus:bg-secondary-100 text-primary-brown focus:text-primary-brown'>
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => deleteProduct(product.id)}
+                            className='justify-end w-full whitespace-nowrap focus:bg-secondary-100 text-primary-brown focus:text-primary-brown'
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>

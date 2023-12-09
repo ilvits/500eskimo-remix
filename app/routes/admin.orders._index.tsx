@@ -1,54 +1,126 @@
-import { json, type LoaderFunctionArgs } from '@remix-run/node';
-import { useLoaderData } from '@remix-run/react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '~/components/ui/custom/dropdown-menu';
+import { Form, useLoaderData, useSearchParams } from '@remix-run/react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs';
+
+import type { LoaderFunctionArgs } from '@remix-run/node';
+import { PaginationBar } from '~/components/ui/custom/PaginationBar';
+import { PiCaretDownBold } from 'react-icons/pi/index.js';
 import dayjs from 'dayjs';
 import { getAllOrders } from '~/services/orders.server';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table';
+import { json } from '@remix-run/node';
 import numeral from 'numeral';
-import { Button } from '~/components/ui/button';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const searchParams = new URL(request.url).searchParams;
-  const status = searchParams.get('status');
-  console.log('status: ', status);
+  const status = searchParams.get('status') || 'all';
+  const orderBy = searchParams.get('orderBy') || 'createdAt';
+  const order = searchParams.get('order') || 'desc';
+  const $top = searchParams.get('$top') || '10';
+  const $skip = searchParams.get('$skip') || '0';
 
-  const orders = await getAllOrders(status || 'all');
-  return json({ orders });
+  const { orders, groupOrders, total } = await getAllOrders(status, orderBy, order, $top, $skip);
+  return json({ orders, groupOrders, total, status, $top });
 };
-export default function AdminMessages() {
-  const { orders } = useLoaderData<typeof loader>();
+export default function AdminOrders() {
+  const { orders, groupOrders, total, status, $top } = useLoaderData<typeof loader>();
+  const productsOnPageOptions = ['10', '25', '50', '100'];
+
+  const [searchParams] = useSearchParams();
+  const existingParams = Array.from(searchParams.entries());
 
   const setStatus = (status: string) => {
     const searchParams = new URLSearchParams();
     searchParams.set('status', status);
+    searchParams.set('$top', $top);
+    window.location.search = searchParams.toString();
+  };
+
+  const handleOrderBy = (orderBy: string) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.get('orderBy') ? searchParams.set('orderBy', orderBy) : searchParams.append('orderBy', orderBy);
+    searchParams.get('order')
+      ? searchParams.get('order') === 'asc'
+        ? searchParams.set('order', 'desc')
+        : searchParams.set('order', 'asc')
+      : searchParams.append('order', 'asc');
     window.location.search = searchParams.toString();
   };
 
   return (
     <div className='flex flex-col space-y-6'>
       <h1 className='text-3xl font-bold'>Orders</h1>
-      <section id='filters' className='flex space-x-4'>
-        <Button variant='secondary' onClick={() => setStatus('all')}>
-          Active
-        </Button>
-        <Button variant='outline' onClick={() => setStatus('pending')}>
-          Pending
-        </Button>
-        <Button variant='outline' onClick={() => setStatus('delivering')}>
-          Shipped
-        </Button>
-        <Button variant='outline' onClick={() => setStatus('closed')}>
-          Closed
-        </Button>
+      <section id='filters' className='flex space-x-2.5'>
+        <Tabs defaultValue='active' className=''>
+          <TabsList>
+            <TabsTrigger
+              value='All'
+              data-state={status === 'all' ? 'active' : ''}
+              className='px-6 py-1.5 border border-primary-brown text-primary-brown data-[state=active]:bg-secondary-100 data-[state=active]:text-primary-brown data-[state=active]:border-secondary-100'
+              onClick={() => setStatus('all')}
+            >
+              All ({numeral(total).format('(0,0.00a)')})
+            </TabsTrigger>
+            <TabsTrigger
+              value='active'
+              data-state={status === 'active' ? 'active' : ''}
+              className='px-6 py-1.5 border border-primary-brown text-primary-brown data-[state=active]:bg-secondary-100 data-[state=active]:text-primary-brown data-[state=active]:border-secondary-100'
+              onClick={() => setStatus('active')}
+            >
+              Active (
+              {numeral(groupOrders.filter(group => group.status !== 'closed').reduce((a, b) => a + b.count, 0)).format(
+                '(0,0.00a)'
+              )}
+              )
+            </TabsTrigger>
+            <TabsTrigger
+              value='pending'
+              data-state={status === 'pending' ? 'active' : ''}
+              className='px-6 py-1.5 border border-primary-brown text-primary-brown data-[state=active]:bg-secondary-100 data-[state=active]:text-primary-brown data-[state=active]:border-secondary-100'
+              onClick={() => setStatus('pending')}
+            >
+              Pending ({numeral(groupOrders.find(group => group.status === 'pending')?.count || 0).format('(0,0.00a)')})
+            </TabsTrigger>
+            <TabsTrigger
+              value='delivering'
+              data-state={status === 'delivering' ? 'active' : ''}
+              className='px-6 py-1.5 border border-primary-brown text-primary-brown data-[state=active]:bg-secondary-100 data-[state=active]:text-primary-brown data-[state=active]:border-secondary-100'
+              onClick={() => setStatus('delivering')}
+            >
+              Delivering (
+              {numeral(groupOrders.find(group => group.status === 'delivering')?.count || 0).format('(0,0.00a)')})
+            </TabsTrigger>
+            <TabsTrigger
+              value='closed'
+              data-state={status === 'closed' ? 'active' : ''}
+              className='px-6 py-1.5 border border-primary-brown text-primary-brown data-[state=active]:bg-secondary-100 data-[state=active]:text-primary-brown data-[state=active]:border-secondary-100'
+              onClick={() => setStatus('closed')}
+            >
+              Closed ({numeral(groupOrders.find(group => group.status === 'closed')?.count || 0).format('(0,0.00a)')})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </section>
       <section id='products' className='w-full border rounded-t-xl border-secondary-100'>
         <Table>
           <TableHeader>
             <TableRow className='hover:bg-secondary-50 bg-secondary-50 [&>th]:text-secondary-500 [&>th]:font-semibold border-secondary-100'>
-              <TableHead className='w-16 rounded-tl-xl'>№</TableHead>
+              <TableHead className='w-16 cursor-pointer rounded-tl-xl' onClick={() => handleOrderBy('id')}>
+                №
+              </TableHead>
               <TableHead className='w-28'>Status</TableHead>
               <TableHead className='min-w-fit max-w-fit'>Products</TableHead>
-              <TableHead className='text-center'>Delivered</TableHead>
-              <TableHead className='text-center'>Total</TableHead>
+              <TableHead className='text-center cursor-pointer' onClick={() => handleOrderBy('deliveredAt')}>
+                Delivered
+              </TableHead>
+              <TableHead className='text-center cursor-pointer' onClick={() => handleOrderBy('total')}>
+                Total
+              </TableHead>
               <TableHead className='text-center rounded-tr-xl'>Customer</TableHead>
             </TableRow>
           </TableHeader>
@@ -117,6 +189,47 @@ export default function AdminMessages() {
           </TableBody>
         </Table>
       </section>
+      {orders.length > 0 && (
+        <section id='pagination' className='flex justify-between my-12 text-xs font-medium'>
+          <PaginationBar total={total} />
+          <div className='flex items-center space-x-2'>
+            <div>Products per page: </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className='min-w-[32px] min-h-[32px] px-2 rounded-md bg-secondary-50 border border-secondary-100 flex justify-center items-center space-x-2 text-sm font-normal'>
+                  <span>{$top}</span>
+                  <PiCaretDownBold />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align='end'
+                className='min-w-[54px] rounded-md shadow-none bg-secondary-50 border border-secondary-100'
+              >
+                {productsOnPageOptions.map((value, index) => {
+                  return (
+                    <Form method='get' preventScrollReset key={index}>
+                      <>
+                        {[
+                          ['$skip', '0'],
+                          ['$top', value],
+                          ...existingParams.filter(([key]) => key !== '$skip' && key !== '$top'),
+                        ].map(([key, value]) => {
+                          return <input key={key} type='hidden' name={key} value={value} />;
+                        })}
+                      </>
+                      <button className='w-full' type='submit'>
+                        <DropdownMenuItem className='focus:bg-secondary-100 text-primary-brown focus:text-primary-brown'>
+                          {value}
+                        </DropdownMenuItem>
+                      </button>
+                    </Form>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

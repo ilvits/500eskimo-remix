@@ -1,13 +1,47 @@
+import type { ProductStatus, Products } from '@prisma/client';
+
 import cloudinary from 'cloudinary';
 import invariant from 'tiny-invariant';
 import { prisma } from '~/lib/prisma.server';
 import slugify from '@sindresorhus/slugify';
 
-interface UploadedImage {
+type UploadedImage = {
   secure_url?: string;
   url: string;
   public_id: string;
+};
+
+type GroupProducts = {
+  name: string;
+  count: number;
+};
+
+interface ProductsExtended extends Products {
+  id: number;
+  price: number;
+  optionValue: {
+    value: string;
+    unit: string;
+  };
+  sku: string;
+  quantity: number;
+  productVariants: {
+    id: number;
+    price: number;
+    optionValue: {
+      value: string;
+      unit: string;
+    };
+    sku: string;
+    quantity: number;
+  }[];
+  tags: {
+    id: number;
+    name: string;
+    color: string;
+  }[];
 }
+
 export const getProducts = async ({
   q,
   productStatus,
@@ -114,11 +148,16 @@ export const getProducts = async ({
       name: group.productStatus,
       count: group._count,
     };
-  });
-  // console.log('products: ', result[1][2]);
+  }) as GroupProducts[];
 
   invariant(result, 'Unable to get all products');
-  return { total: result[0], products: result[1], groupProducts, categories: result[3], tags: result[4] };
+  return {
+    total: result[0],
+    products: result[1] as ProductsExtended[],
+    groupProducts,
+    categories: result[3],
+    tags: result[4],
+  };
 };
 export const createProduct = async (data: any, images: any, tagIds: any) => {
   data.slug = slugify(data.title);
@@ -183,11 +222,23 @@ export const getProduct = async (id: number) => {
   invariant(product, 'Unable to get product');
   return product;
 };
+
+export const getTotalProducts = async () => {
+  const result = await prisma.products.count();
+  return result;
+};
+
 export const getAllCategories = async () => {
   const categories = await prisma.categories.findMany();
   invariant(categories, 'Unable to get all categories');
   return categories;
 };
+
+export const getTotalCategories = async () => {
+  const result = await prisma.categories.count();
+  return result;
+};
+
 export const getAllTags = async () => {
   const tags = await prisma.tags.findMany();
   invariant(tags, 'Unable to get all tags');
@@ -213,4 +264,24 @@ export const getOptions = async () => {
   });
   invariant(options, 'Unable to get all options');
   return options;
+};
+
+export const deleteProduct = async (id: number) => {
+  const orders = await prisma.orderItems.findMany({
+    where: {
+      productsId: id,
+    },
+  });
+  if (orders.length > 0) {
+    throw new Error('Cannot delete product with orders');
+  }
+  const product = await prisma.products.delete({ where: { id } });
+  invariant(product, 'Unable to delete product');
+  return product;
+};
+
+export const changeProductStatus = async (id: number, status: keyof typeof ProductStatus) => {
+  const product = await prisma.products.update({ where: { id }, data: { productStatus: status } });
+  invariant(product, 'Unable to change product status');
+  return product;
 };

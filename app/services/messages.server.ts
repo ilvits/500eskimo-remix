@@ -11,3 +11,8 @@ export const getMessages = async (take = 10) => {
   });
   return result;
 };
+
+export const totalMessages = async () => {
+  const result = await prisma.messages.count();
+  return result;
+};

@@ -7,11 +7,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '~/components/ui/alert-dialog';
 import type { Coordinates, CropperRef, CropperState, DefaultSettings } from 'react-advanced-cropper';
 import { Cropper, getTransformedImageSize, retrieveSizeRestrictions } from 'react-advanced-cropper';
-import type { DataFunctionArgs, LinksFunction, LoaderFunction } from '@remix-run/node';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '~/components/ui/dialog';
 import {
   DropdownMenu,
@@ -20,19 +18,19 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/custom/dropdown-menu';
 import type { DropzoneOptions, FileRejection } from 'react-dropzone';
-import { ValidatedForm, validationError } from 'remix-validated-form';
-import { createProduct, getAllCategories, getAllTags, getOptions } from '~/services/products.server';
-import { json, redirect } from '@remix-run/node';
-import { useActionData, useBlocker, useLoaderData, useNavigation, useSearchParams } from '@remix-run/react';
+import type { loader } from '~/routes/admin.products.new';
+import { useBlocker, useLoaderData, useNavigation, useSearchParams } from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { AddProduct } from '~/common/productSchema';
 import { Button } from '~/components/ui/button';
 import { FormInput } from '~/components/ui/custom/FormInput';
 import { FormTextarea } from '~/components/ui/custom/FormTextarea';
-import { ProductOptionSelect } from '~/components/ui/custom/ProductOptionSelect';
+import type { LinksFunction } from '@remix-run/node';
+import ProductVariants from './ProductVariants';
 import { Switch } from '~/components/ui/switch';
 import { TagsSelect } from '~/components/ui/custom/TagsSelect';
+import { ValidatedForm } from 'remix-validated-form';
 import dashedBorderCSS from '~/styles/dashed-border.css';
 import { productSchema } from '~/common/productSchema';
 import reactCroperAdditional from '~/styles/react-advanced-cropper.css';
@@ -41,9 +39,9 @@ import reactCroperTheme from 'react-advanced-cropper/dist/themes/corners.css';
 import { useDropzone } from 'react-dropzone-esm';
 import { withZod } from '@remix-validated-form/with-zod';
 
-type ProductVariants = {
-  [key: string]: string | number | undefined;
-};
+// export type ProductVariants = {
+//   [key: string]: string | number | undefined;
+// };
 
 export type FormErrors = {
   [key: string]: boolean;
@@ -60,42 +58,21 @@ export const links: LinksFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = async () => {
-  const categories = await getAllCategories();
-  const tags = await getAllTags();
-  const options = await getOptions();
-  return json({ categories, tags, options });
-};
-
-export const action = async ({ request }: DataFunctionArgs) => {
-  const formData = await request.formData();
-  const fieldValues = (await validator.validate(formData)) || { data: {} };
-
-  if (fieldValues.error) return validationError(fieldValues.error);
-
-  const tagIds = formData.getAll('tagIds');
-  const imagesData = formData.getAll('images');
-  const createdProduct = await createProduct(fieldValues.data, imagesData, tagIds);
-  if (!createdProduct) throw new Error('Something went wrong');
-
-  return redirect('/admin/products?status=draft');
-};
-
-export default function AddNewProduct() {
+export default function AdminNewProductLayout() {
   const navigation = useNavigation();
   const cropperRef = useRef<CropperRef>(null);
 
-  const [coverSrc, setCoverSrc] = useState<string | null | undefined>(null);
   const [cover, setCover] = useState<string | null | undefined>(undefined);
-  const [files, setFiles] = useState<string[]>([]);
+  const [coverSrc, setCoverSrc] = useState<string | null | undefined>(null);
   const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
+  const [files, setFiles] = useState<string[]>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [dropZoneErrors, setDropZoneErrors] = useState<string[]>([]);
-  const [productVariants, setProductVariants] = useState<ProductVariants[]>([]);
+  const [productVariants, setProductVariants] = useState<AddProduct['productVariants']>([]);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   const { tags, options } = useLoaderData<typeof loader>();
-  const data = useActionData<typeof action>();
+
   const [searchParams] = useSearchParams();
   const categoryId = Number(searchParams.get('categoryId')) || 1;
 
@@ -143,14 +120,8 @@ export default function AddNewProduct() {
 
   useEffect(() => {
     productVariants.length > 0 && setFormErrors((prevState: FormErrors) => ({ ...prevState, productVariants: false }));
-  }, [productVariants]);
-
-  useEffect(() => {
     productVariants.every(variant => variant.optionValueId) &&
       setFormErrors((prevState: FormErrors) => ({ ...prevState, optionValueId: false }));
-  }, [productVariants]);
-
-  useEffect(() => {
     productVariants.every(variant => variant.name) &&
       setFormErrors((prevState: FormErrors) => ({ ...prevState, optionName: false }));
   }, [productVariants]);
@@ -246,7 +217,7 @@ export default function AddNewProduct() {
   } as DropzoneOptions);
 
   const addProductVariant = () => {
-    setProductVariants(prev => [...prev, { name: '', sku: '', price: 0, quantity: 0, optionValueId: undefined }]);
+    setProductVariants(prev => [...prev, { name: '', sku: '', price: 0, quantity: 0, optionValueId: NaN }]);
   };
 
   const removeProductVariant = (index: number) => {
@@ -263,7 +234,6 @@ export default function AddNewProduct() {
 
   return (
     <div>
-      {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
       <h1 className='mb-8 text-2xl font-bold'>Add New Product</h1>
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
         <input type='hidden' name='categoryId' value={categoryId} />
@@ -272,8 +242,6 @@ export default function AddNewProduct() {
         <input type='hidden' name='numReviews' value='0' />
         {cover && <input type='hidden' name='cover' value={cover} />}
         {files && files.map((file, i) => <input key={i} type='hidden' name='images' value={file} />)}
-        {/* <input type='hidden' id='productVariants' name='productVariants' value={JSON.stringify(productVariants)} /> */}
-        {/* {selectedTags && selectedTags.map((tag, i) => <input key={i} type='hidden' name='tagIds' value={tag} />)} */}
         <div className='flex items-start w-full space-x-12'>
           <div className='w-3/5 space-y-8'>
             <FormInput type='text' name='title' id='title' label='Title' />
@@ -293,101 +261,16 @@ export default function AddNewProduct() {
                   +
                 </button>
               </div>
-              {productVariants.length > 0 &&
-                (console.log('productVariants: ', productVariants[0]),
-                (
-                  <div className='flex flex-col gap-4 pt-4 border-t border-primary-brown'>
-                    {productVariants.map((variant, i) => (
-                      <div key={i}>
-                        <div className='space-y-4'>
-                          <div className='flex items-center justify-between mb-4'>
-                            <h3 className='text-lg font-bold'>{variant.name || 'Variant ' + (i + 1)}</h3>
-                            <div className='flex items-center space-x-2'>
-                              <button type='button' onClick={() => duplicateProductVariant(i)}>
-                                <img src='/static/assets/icons/duplicate.svg' alt='' />
-                              </button>
-                              <AlertDialog>
-                                <AlertDialogTrigger>
-                                  <button type='button'>
-                                    <img src='/static/assets/icons/trash-red.svg' alt='' />
-                                  </button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This action cannot be undone. Are you sure?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => removeProductVariant(i)}>
-                                      Continue
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </div>
-                          <div className='grid grid-cols-2 gap-4'>
-                            {Object.entries(variant).map(([key, value]) =>
-                              key === 'optionValueId' ? null : (
-                                <FormInput
-                                  key={key}
-                                  type={typeof value}
-                                  name={`productVariants[${i}].${key}`}
-                                  sublabel={key}
-                                  // defaultValue={value as string}
-                                  // value={key in productVariants[i][key] ? productVariants[i][key] : ''}
-                                  value={productVariants[i][key]}
-                                  onChange={e => {
-                                    setProductVariants(prev =>
-                                      prev.map((v, j) =>
-                                        i === j
-                                          ? {
-                                              ...v,
-                                              [key]:
-                                                typeof value === 'string' ? e.target.value : Number(e.target.value),
-                                            }
-                                          : v
-                                      )
-                                    );
-                                  }}
-                                />
-                              )
-                            )}
-                            {options &&
-                              options.length > 0 &&
-                              options.map((option: any) => (
-                                <div key={option.id}>
-                                  <ProductOptionSelect
-                                    label={option.name}
-                                    aria-labelledby='option-label'
-                                    name={`productVariants[${i}].optionValueId`}
-                                    options={option.optionValues}
-                                    defaultValue={option.optionValues.find((o: any) => o.id === variant.optionValueId)}
-                                    formErrors={formErrors}
-                                    onChange={(option: any) => {
-                                      setProductVariants(prev =>
-                                        prev.map((v, j) =>
-                                          i === j
-                                            ? {
-                                                ...v,
-                                                optionValueId: Number(option.id),
-                                              }
-                                            : v
-                                        )
-                                      );
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
+              {productVariants.length > 0 && (
+                <ProductVariants
+                  options={options}
+                  formErrors={formErrors}
+                  productVariants={productVariants}
+                  setProductVariants={setProductVariants}
+                  duplicateProductVariant={duplicateProductVariant}
+                  removeProductVariant={removeProductVariant}
+                />
+              )}
             </section>
             <div className='space-y-4'>
               <FormInput type='text' name='conditions' label='Characteristics' sublabel='Shelf life and conditions' />

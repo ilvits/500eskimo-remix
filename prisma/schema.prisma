@@ -64,7 +64,7 @@ model Tags {
 }
 
 model Products {
-  id              Int               @id @default(autoincrement())
+  id              Int               @id @unique @default(autoincrement())
   categoryId      Int
   tagIds          String[]
   title           String
@@ -90,7 +90,7 @@ model Products {
 }
 
 model ProductVariants {
-  id            Int             @id @default(autoincrement())
+  id            Int             @id @unique @default(autoincrement())
   name          String          @default("")
   productId     Int
   optionValueId Int
@@ -100,7 +100,7 @@ model ProductVariants {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @default(now())
   options       Options[]
-  product       Products        @relation(fields: [productId], references: [id])
+  product       Products        @relation(fields: [productId], references: [id], onDelete: Cascade)
   optionValue   OptionValues    @relation(fields: [optionValueId], references: [id])
   productImages ProductImages[]
   orderItems    OrderItems[]
