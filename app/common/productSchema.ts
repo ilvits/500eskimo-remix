@@ -8,20 +8,49 @@ export const categorySchema = z.object({
 export type AddCategory = z.infer<typeof categorySchema>;
 
 export const productSchema = z.object({
-  categoryId: z.coerce.number(),
+  id: z.coerce.number().optional(),
+  // categorySlug: z.coerce.string(),
   title: z.string({ required_error: 'Title is required' }).min(3, 'Must contain at least 3 chars'),
-  description: z.string().optional(),
+  description: z.string({ required_error: 'Description is required' }).min(10, 'Must contain at least 10 chars'),
   cover: z.string(),
-  conditions: z.string().optional(),
-  callories: z.coerce.number().optional(),
-  protein: z.coerce.number().optional(),
-  fat: z.coerce.number().optional(),
-  carbs: z.coerce.number().optional(),
-  ProductStatus: z.enum(['published', 'draft', 'unpublished']).default('published').optional(),
+  conditions: z.string({ required_error: 'Conditions is required' }).min(10, 'Must contain at least 10 chars'),
+  callories: z.coerce.number().min(1, 'Must be > 0'),
+  protein: z.coerce.number().min(1, 'Must be > 0'),
+  fat: z.coerce.number().min(1, 'Must be > 0'),
+  carbs: z.coerce.number().min(1, 'Must be > 0'),
+  productStatus: z.enum(['published', 'draft', 'archived']).default('published').optional(),
   tagIds: z.string().or(z.array(z.string())).optional(),
+  freeDelivery: z.coerce.boolean().default(false),
   productVariants: z.array(
     z.object({
-      name: z.string().min(3, 'Must contain at least 3 chars').optional(),
+      name: z.string({ required_error: 'Name is required' }).min(3, 'Must contain at least 3 chars'),
+      price: z.coerce.number().default(0).optional(),
+      sku: z.string().optional().optional(),
+      quantity: z.coerce.number().default(0).optional(),
+      optionValueId: z.coerce.number({ required_error: 'Option value is required' }),
+    })
+  ),
+});
+
+export const editProductSchema = z.object({
+  // categorySlug: z.string(),
+  title: z.string({ required_error: 'Title is required' }).min(3, 'Must contain at least 3 chars'),
+  description: z.string({ required_error: 'Description is required' }).min(10, 'Must contain at least 10 chars'),
+  cover: z.string(),
+  // coverPublicId: z.string(),
+  // images: z.array(z.string()).optional(),
+  conditions: z.string({ required_error: 'Conditions is required' }).min(10, 'Must contain at least 10 chars'),
+  callories: z.coerce.number().min(1, 'Must be > 0'),
+  protein: z.coerce.number().min(1, 'Must be > 0'),
+  fat: z.coerce.number().min(1, 'Must be > 0'),
+  carbs: z.coerce.number().min(1, 'Must be > 0'),
+  productStatus: z.enum(['published', 'draft', 'archived']).default('published').optional(),
+  tagIds: z.string().or(z.array(z.string())).optional(),
+  freeDelivery: z.coerce.boolean().default(false),
+  productVariants: z.array(
+    z.object({
+      id: z.coerce.number().optional(),
+      name: z.string({ required_error: 'Name is required' }).min(3, 'Must contain at least 3 chars'),
       price: z.coerce.number().default(0).optional(),
       sku: z.string().optional().optional(),
       quantity: z.coerce.number().default(0).optional(),
@@ -32,6 +61,4 @@ export const productSchema = z.object({
 
 export type AddProduct = z.infer<typeof productSchema>;
 
-// export const authSchemaWithoutUsername = productSchema.omit({ username: true });
-
-// export type GetUserByEmailAuth = z.infer<typeof authSchemaWithoutUsername>;
+export type EditProduct = z.infer<typeof editProductSchema>;

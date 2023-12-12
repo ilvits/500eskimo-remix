@@ -11,9 +11,9 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 export function FormInput({ name, label, sublabel, onChange, ...rest }: InputProps) {
   const { error, getInputProps } = useField(name);
   return (
-    <div className=''>
+    <div className={sublabel === 'id' ? 'hidden' : 'block'}>
       {label && (
-        <label htmlFor={name} className='font-bold mb-4 block'>
+        <label htmlFor={name} className='block mb-4 font-bold'>
           {label}
         </label>
       )}

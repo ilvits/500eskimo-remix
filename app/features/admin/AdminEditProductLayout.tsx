@@ -18,19 +18,20 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/custom/dropdown-menu';
 import type { DropzoneOptions, FileRejection } from 'react-dropzone';
-import { useBlocker, useLoaderData, useNavigation, useSearchParams } from '@remix-run/react';
+import { useBlocker, useLoaderData, useNavigation } from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
-import type { AddProduct } from '~/common/productSchema';
 import { Button } from '~/components/ui/button';
+import type { EditProduct } from '~/common/productSchema';
 import { FormInput } from '~/components/ui/custom/FormInput';
 import { FormTextarea } from '~/components/ui/custom/FormTextarea';
+import { PiSpinnerLight } from 'react-icons/pi/index.js';
 import ProductVariants from './ProductVariants';
 import { Switch } from '~/components/ui/switch';
 import { TagsSelect } from '~/components/ui/custom/TagsSelect';
 import { ValidatedForm } from 'remix-validated-form';
-import type { loader } from '~/routes/admin.products.new';
-import { productSchema } from '~/common/productSchema';
+import { editProductSchema } from '~/common/productSchema';
+import type { loader } from '~/routes/admin.products.$productId.edit';
 import { useDropzone } from 'react-dropzone-esm';
 import { withZod } from '@remix-validated-form/with-zod';
 
@@ -38,9 +39,25 @@ export type FormErrors = {
   [key: string]: boolean;
 };
 
-const validator = withZod(productSchema);
+interface ProductVariantWithOptionValue extends EditProduct {
+  productVariants: {
+    id: number;
+    name: string;
+    sku: string;
+    price: number;
+    quantity: number;
+    optionValueId: number;
+    optionValue: {
+      id: number;
+      value: string;
+      unit: string;
+    };
+  }[];
+}
 
-export default function AdminNewProductLayout() {
+const validator = withZod(editProductSchema);
+
+export default function AdminEditProductLayout() {
   const navigation = useNavigation();
   const cropperRef = useRef<CropperRef>(null);
 
@@ -50,36 +67,74 @@ export default function AdminNewProductLayout() {
   const [files, setFiles] = useState<string[]>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [dropZoneErrors, setDropZoneErrors] = useState<string[]>([]);
-  const [productVariants, setProductVariants] = useState<AddProduct['productVariants']>([]);
+  const [productVariants, setProductVariants] = useState<EditProduct['productVariants']>([]);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
-  const { tags, options } = useLoaderData<typeof loader>();
+  const { tags, options, product } = useLoaderData<typeof loader>();
 
-  const [searchParams] = useSearchParams();
-  const categorySlug = searchParams.get('category');
+  const defaultValues: EditProduct = product
+    ? product
+    : {
+        cover: '',
+        title: '',
+        description: '',
+        conditions: '',
+        callories: 0,
+        protein: 0,
+        fat: 0,
+        carbs: 0,
+        tagIds: [],
+        freeDelivery: false,
+        productVariants: [
+          {
+            id: 0,
+            name: '',
+            price: 0,
+            sku: '',
+            quantity: 0,
+            optionValueId: 0,
+          },
+        ],
+      };
 
-  const defaultValues: AddProduct = {
-    productStatus: 'draft',
-    cover: '',
-    title: '',
-    description: '',
-    conditions: '',
-    callories: 0,
-    protein: 0,
-    fat: 0,
-    carbs: 0,
-    tagIds: [],
-    freeDelivery: false,
-    productVariants: [
-      {
-        name: '',
-        price: 0,
-        sku: '',
-        quantity: 0,
-        optionValueId: 0,
-      },
-    ],
-  };
+  useEffect(() => {
+    product?.cover &&
+      fetch(product.cover)
+        .then(res => res.blob() as Promise<Blob>)
+        .then(blob => {
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          return new Promise(resolve => {
+            reader.onload = () => {
+              resolve(reader.result);
+              setCover(reader.result as string);
+            };
+            reader.onerror = error => {
+              console.error(error);
+            };
+          });
+        });
+    product?.productImages &&
+      product.productImages.map(async (image: { imageUrl: string }) => {
+        const data = await fetch(image.imageUrl).then(res => res.arrayBuffer());
+        const blob = new Blob([data], { type: 'image/webp' });
+        const base64 = (await toBase64(blob)) as string;
+        setFiles(prevState => (prevState.includes(base64) ? prevState : prevState.concat(base64)));
+      });
+    product?.productVariants &&
+      setProductVariants(
+        product.productVariants.map((variant: ProductVariantWithOptionValue['productVariants'][0]) => {
+          return {
+            id: variant.id,
+            name: variant.name,
+            sku: variant.sku,
+            price: Number(variant.price),
+            quantity: Number(variant.quantity),
+            optionValueId: Number(variant.optionValue.id),
+          };
+        }) || []
+      );
+  }, [product]);
 
   useEffect(() => {
     if (coverSrc) {
@@ -109,13 +164,14 @@ export default function AdminNewProductLayout() {
       setFormErrors((prevState: FormErrors) => ({ ...prevState, optionName: false }));
   }, [productVariants]);
 
-  const toBase64 = (file: File): Promise<string | ArrayBuffer | null> =>
+  const toBase64 = (file: File | Blob): Promise<string | ArrayBuffer | null> =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = () => resolve(reader.result);
       reader.onerror = error => reject(error);
     });
+
   const defaultSize = ({ imageSize, visibleArea }: CropperState) => {
     return {
       width: (visibleArea || imageSize).width,
@@ -227,12 +283,17 @@ export default function AdminNewProductLayout() {
 
   return (
     <div>
-      <h1 className='mb-8 text-2xl font-bold'>Add New Product</h1>
+      <h1 className='mb-8 text-2xl font-bold'>
+        {product?.title} ({product?.category.name})
+      </h1>
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
+        <input type='hidden' name='id' value={product?.id} />
+        <input type='hidden' name='categorySlug' value={product?.category.slug} />
         <input type='hidden' name='productStatus' value='draft' />
-        <input type='hidden' name='rating' value={0} />
-        <input type='hidden' name='numReviews' value={0} />
-        <input type='hidden' name='categorySlug' value={categorySlug || ''} />
+        <input type='hidden' name='rating' value='0' />
+        <input type='hidden' name='numReviews' value='0' />
+        {/* //TODO: Rename cover_public_id to coverPublicId in db */}
+        <input type='hidden' name='coverPublicId' value={product?.cover_public_id} />
         {cover && <input type='hidden' name='cover' value={cover} />}
         {files && files.map((file, i) => <input key={i} type='hidden' name='images' value={file} />)}
         <div className='flex items-start w-full space-x-12'>
@@ -273,14 +334,13 @@ export default function AdminNewProductLayout() {
                 <FormInput type='number' name='fat' sublabel='Fat' />
                 <FormInput type='number' name='carbs' sublabel='Carbs' />
               </div>
-              {/* <input type='hidden' name='tagIds' value={Array.from(tags).map(tag => tag.id.toString())} /> */}
-              <TagsSelect tags={tags} name='tagIds' label='Tags' />
+              <TagsSelect tags={tags} name='tagIds' label='Tags' selectedTags={product.tagIds} />
             </div>
             <label htmlFor='freeDelivery' className='flex items-center justify-between'>
               <p>Free Delivery</p>
-              <Switch id='freeDelivery' name='freeDelivery' defaultChecked={defaultValues.freeDelivery} />
+              <Switch id='freeDelivery' name='freeDelivery' defaultChecked={product.freeDelivery} />
             </label>
-            <div className='flex space-x-4'>
+            <div className='relative flex space-x-4'>
               <Button
                 type='submit'
                 className='disabled:cursor-not-allowed disabled:opacity-50'
@@ -295,9 +355,31 @@ export default function AdminNewProductLayout() {
                   }
                 }}
               >
-                Add Product
+                Update
               </Button>
-              <Button type='button' variant='secondary' onClick={() => window.history.back()}>
+              <PiSpinnerLight
+                aria-hidden
+                hidden={navigation.state === 'idle'}
+                className='absolute w-6 h-6 -left-1.5 fill-background animate-spin top-2'
+              />
+              <Button
+                type='button'
+                variant='outline'
+                className='disabled:cursor-not-allowed disabled:opacity-50'
+                disabled={navigation.state !== 'idle'}
+                onClick={() => {
+                  window.history.back();
+                }}
+              >
+                Delete
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                className='disabled:cursor-not-allowed disabled:opacity-50'
+                disabled={navigation.state !== 'idle'}
+                onClick={() => window.history.back()}
+              >
                 Cancel
               </Button>
             </div>
@@ -317,7 +399,7 @@ export default function AdminNewProductLayout() {
                           formErrors.cover && '!text-additional-red animate-shake'
                         }`}
                       >
-                        Upload cover please
+                        {navigation.state !== 'idle' ? <div>Loading...</div> : null}
                       </label>
                     </>
                   )}
@@ -344,7 +426,9 @@ export default function AdminNewProductLayout() {
                             <DialogTrigger className='w-full text-right cursor-pointer'>Edit</DialogTrigger>
                           </DropdownMenuItem>
                           <DropdownMenuItem>
-                            <label htmlFor='image-change'>Replace</label>
+                            <label htmlFor='image-change' className='w-full text-right cursor-pointer'>
+                              Replace
+                            </label>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -459,9 +543,9 @@ export default function AdminNewProductLayout() {
                   </div>
                 </div>
                 <div className='grid w-full grid-cols-3 gap-4 mt-4 grid-container'>
-                  {files.map(file => (
+                  {files.map((file, i) => (
                     <div
-                      key={file}
+                      key={i}
                       className='relative p-2.5 flex items-center justify-center rounded-lg
                        bg-secondary-100 [&>div.trash]:hover:opacity-100 aspect-square w-full h-auto'
                     >

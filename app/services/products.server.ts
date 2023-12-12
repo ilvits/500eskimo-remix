@@ -16,8 +16,7 @@ type GroupProducts = {
   count: number;
 };
 
-interface ProductsExtended extends Products {
-  id: number;
+export interface ProductsExtended extends Products {
   price: number;
   optionValue: {
     value: string;
@@ -35,6 +34,11 @@ interface ProductsExtended extends Products {
     sku: string;
     quantity: number;
   }[];
+  orderItems: {
+    length: any;
+    id: number;
+    quantity: number;
+  };
   tags: {
     id: number;
     name: string;
@@ -75,6 +79,15 @@ export const getProducts = async ({
     take: $top || 10,
     skip: $skip || 0,
     include: {
+      orderItems: {
+        include: {
+          productVariant: {
+            include: {
+              optionValue: true,
+            },
+          },
+        },
+      },
       category: {
         select: {
           name: true,
@@ -159,14 +172,21 @@ export const getProducts = async ({
     tags: result[4],
   };
 };
-export const createProduct = async (data: any, images: any, tagIds: any) => {
+
+export const createProduct = async (data: any, images: any, categorySlug: any, tagIds: any) => {
+  const category = await prisma.categories.findFirst({
+    where: {
+      slug: categorySlug,
+    },
+  });
+  data.categoryId = category?.id;
   data.slug = slugify(data.title);
   data.tagIds = tagIds;
 
   if (data.cover && data.cover.length > 0) {
     const uploadedCover = (await cloudinary.v2.uploader.upload(
       data.cover,
-      { public_id: `products/${data.categoryId}/${data.slug}/${data.slug}_cover`, overwrite: true },
+      { public_id: `products/${categorySlug}/${data.slug}/${data.slug}_cover`, overwrite: true },
       function (error, result) {
         console.log('uploadedCover: ', result);
         if (error) {
@@ -185,7 +205,7 @@ export const createProduct = async (data: any, images: any, tagIds: any) => {
       .map(async (image: any) => {
         const uploadedImage = (await cloudinary.v2.uploader.upload(
           image,
-          { folder: `products/${data.categoryId}/${data.slug}` },
+          { folder: `products/${categorySlug}/${data.slug}` },
           function (error, result) {
             console.log('uploadedImage: ', result);
             if (error) {
@@ -215,11 +235,176 @@ export const createProduct = async (data: any, images: any, tagIds: any) => {
   });
   invariant(product, 'Unable to create product');
   return product;
-  return;
 };
+
+export const updateProduct = async (
+  data: any,
+  productId: any,
+  categorySlug: any,
+  coverPublicId: any,
+  images: any,
+  tagIds: any
+) => {
+  data.slug = slugify(data.title);
+  data.tagIds = tagIds;
+  data.updatedAt = new Date();
+
+  const productVariants = data.productVariants;
+  delete data.productVariants;
+
+  coverPublicId &&
+    (await cloudinary.api.delete_resources_by_prefix(
+      coverPublicId.slice(0, coverPublicId.lastIndexOf('/')),
+      (result: any) => {
+        console.log(result);
+      }
+    ));
+
+  if (data.cover && data.cover.length > 0) {
+    const uploadedCover = (await cloudinary.v2.uploader.upload(
+      data.cover,
+      { public_id: `products/${categorySlug}/${data.slug}/${data.slug}_cover`, overwrite: true },
+      function (error, result) {
+        // console.log('uploadedCover: ', result);
+        console.log('cover uploaded');
+
+        if (error) {
+          console.log(error);
+        }
+      }
+    )) as UploadedImage;
+
+    data.cover = uploadedCover.secure_url || uploadedCover.url;
+    coverPublicId = uploadedCover.public_id;
+  }
+
+  const uploadedImages = await Promise.all(
+    images
+      .filter((image: any) => image !== '')
+      .map(async (image: any) => {
+        const uploadedImage = (await cloudinary.v2.uploader.upload(
+          image,
+          { folder: `products/${categorySlug}/${data.slug}` },
+          function (error, result) {
+            // console.log('uploadedImage: ', result);
+            console.log('image uploaded');
+            if (error) {
+              console.log('error: ', error);
+            }
+          }
+        )) as UploadedImage;
+        return uploadedImage;
+      })
+  );
+
+  // if (coverPublicId) {
+  //   await cloudinary.v2.uploader.destroy(coverPublicId);
+  // }
+
+  const updateImages = await prisma.$transaction([
+    prisma.productImages.deleteMany({
+      where: {
+        productId,
+      },
+    }),
+    prisma.productImages.createMany({
+      data: uploadedImages.map(image => {
+        return {
+          productId,
+          imageUrl: image.secure_url || image.url,
+          publicId: image.public_id,
+        };
+      }),
+    }),
+  ]);
+
+  invariant(updateImages, 'Unable to update images');
+
+  const createProductVariants = await prisma.productVariants.createMany({
+    data: productVariants
+      .filter((variant: any) => !variant.id)
+      .map((variant: any) => {
+        return {
+          productId,
+          ...variant,
+        };
+      }),
+    skipDuplicates: true,
+  });
+
+  invariant(createProductVariants, 'Unable to create product variants');
+
+  const updatedProductVariants = productVariants
+    .filter((variant: any) => variant.id)
+    .map(
+      async (variant: any) =>
+        await prisma.productVariants.update({
+          where: {
+            id: variant.id,
+          },
+          data: {
+            ...variant,
+          },
+        })
+    );
+
+  invariant(updatedProductVariants, 'Unable to update product variants');
+
+  const updatedProduct = await prisma.products.update({
+    where: {
+      id: productId,
+    },
+    data: {
+      ...data,
+    },
+  });
+
+  invariant(updatedProduct, 'Unable to update product');
+
+  return updatedProduct;
+};
+
+export const updateProductStatus = async ({ id, status }: { id: number; status: keyof typeof ProductStatus }) => {
+  const product = await prisma.products.update({ where: { id }, data: { productStatus: status } });
+  invariant(product, 'Unable to update product status');
+  return product;
+};
+
 export const getProduct = async (id: number) => {
-  const product = await prisma.products.findUnique({ where: { id } });
+  const product = await prisma.products.findUnique({
+    where: { id },
+    include: {
+      category: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+      productImages: {
+        select: {
+          imageUrl: true,
+          publicId: true,
+        },
+      },
+      productVariants: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          price: true,
+          quantity: true,
+          optionValue: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      },
+    },
+  });
   invariant(product, 'Unable to get product');
+  console.log('product: ', product);
+
   return product;
 };
 
@@ -267,17 +452,40 @@ export const getOptions = async () => {
 };
 
 export const deleteProduct = async (id: number) => {
-  const orders = await prisma.orderItems.findMany({
+  const orderItems = await prisma.orderItems.findMany({
     where: {
       productsId: id,
     },
   });
-  if (orders.length > 0) {
-    throw new Error('Cannot delete product with orders');
+
+  if (orderItems.length) {
+    console.log('orderItems count: ', orderItems.length);
+    return new Response('Unable to delete product with orders', {
+      status: 500,
+      statusText: 'Unable to delete product with orders',
+    });
   }
-  const product = await prisma.products.delete({ where: { id } });
-  invariant(product, 'Unable to delete product');
-  return product;
+  const product = await prisma.products.findUnique({ where: { id } });
+
+  const deletedProduct = await prisma.products.delete({ where: { id } });
+  invariant(deletedProduct, 'Unable to delete ');
+
+  deletedProduct &&
+    product?.cover_public_id &&
+    (await cloudinary.api.delete_resources_by_prefix(
+      product?.cover_public_id.slice(0, product?.cover_public_id.lastIndexOf('/')),
+      (result: any) => {
+        console.log(result);
+      }
+    )) &&
+    (await cloudinary.v2.api.delete_folder(
+      product?.cover_public_id.slice(0, product?.cover_public_id.lastIndexOf('/')),
+      (result: any) => {
+        console.log(result);
+      }
+    ));
+
+  return deletedProduct;
 };
 
 export const changeProductStatus = async (id: number, status: keyof typeof ProductStatus) => {
@@ -285,3 +493,11 @@ export const changeProductStatus = async (id: number, status: keyof typeof Produ
   invariant(product, 'Unable to change product status');
   return product;
 };
+
+// cloudinary.api.delete_resources_by_prefix('products', (result: any) => {
+//   console.log(result);
+// });
+
+// cloudinary.v2.api.delete_folder('products', (result: any) => {
+//   console.log(result);
+// });

@@ -15,8 +15,23 @@ enum Role {
 
 enum ProductStatus {
   published
-  hidden
   draft
+  archived
+}
+
+enum OrderStatus {
+  pending
+  shipped
+  delivered
+}
+
+enum OrderDeliveryMethod {
+  delivery
+  pickup
+}
+
+enum ProductVariantsStatus {
+  published
   archived
 }
 
@@ -80,30 +95,31 @@ model Products {
   rating          Int?
   numReviews      Int?
   freeDelivery    Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @default(now())
   productStatus   ProductStatus     @default(draft)
   productVariants ProductVariants[]
   category        Categories        @relation(fields: [categoryId], references: [id])
   productImages   ProductImages[]
   orderItems      OrderItems[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now())
 }
 
 model ProductVariants {
-  id            Int             @id @unique @default(autoincrement())
-  name          String          @default("")
+  id            Int                   @id @unique @default(autoincrement())
+  name          String                @default("")
+  sku           String
+  status        ProductVariantsStatus @default(published)
   productId     Int
   optionValueId Int
   quantity      Int
-  price         Decimal
-  sku           String
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @default(now())
+  price         Decimal               @db.Decimal(10, 2)
   options       Options[]
-  product       Products        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  optionValue   OptionValues    @relation(fields: [optionValueId], references: [id])
+  product       Products              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  optionValue   OptionValues          @relation(fields: [optionValueId], references: [id])
   productImages ProductImages[]
   orderItems    OrderItems[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @default(now())
 
   @@index([productId, optionValueId], map: "product_variant_idx")
   @@index([name], map: "product_variant_name_idx")
@@ -113,10 +129,10 @@ model Options {
   id              Int               @id @default(autoincrement())
   name            String
   description     String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @default(now())
   optionValues    OptionValues[]
   productVariants ProductVariants[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now())
 }
 
 model OptionValues {
@@ -133,11 +149,12 @@ model OptionValues {
 model ProductImages {
   id               Int              @id @default(autoincrement())
   productId        Int
-  product          Products         @relation(fields: [productId], references: [id])
+  product          Products         @relation(fields: [productId], references: [id], onDelete: Cascade)
   productVariantId Int?
   productVariant   ProductVariants? @relation(fields: [productVariantId], references: [id])
   imageUrl         String
   publicId         String?
+  asset_id         String?
 }
 
 model Orders {
@@ -148,11 +165,11 @@ model Orders {
   deliveryMethod String
   deliveredAt    DateTime
   delivered      Boolean
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @default(now())
   orderItems     OrderItems[]
   customers      Customers?   @relation(fields: [customersId], references: [id])
   customersId    Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now())
 
   @@index([customersId], map: "customer_id_idx")
   @@index([status], map: "status_idx")
@@ -170,7 +187,7 @@ model OrderItems {
   productVariant   ProductVariants @relation(fields: [productVariantId], references: [id])
   order            Orders          @relation(fields: [orderId], references: [id])
   quantity         Int
-  price            Decimal
+  price            Decimal         @db.Decimal(10, 2)
   createdAt        DateTime        @default(now())
 
   @@index([orderId], map: "order_id_idx")

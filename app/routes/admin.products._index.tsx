@@ -1,9 +1,10 @@
-import { type LoaderFunctionArgs, json } from '@remix-run/node';
-
-import { authenticator } from '~/auth/authenticator.server';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
+import { deleteProduct, getProducts, updateProductStatus } from '~/services/products.server';
 
 import AdminProductsLayout from '~/features/admin/AdminProductsLayout';
-import { getProducts } from '~/services/products.server';
+import type { ProductStatus } from '@prisma/client';
+import { authenticator } from '~/auth/authenticator.server';
+import { json } from '@remix-run/node';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticator.isAuthenticated(request, {
@@ -39,6 +40,39 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     categoryId,
     q,
   });
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const formData = await request.formData();
+  const _action = formData.get('_action');
+  console.log('action: ', _action);
+
+  switch (_action) {
+    case 'updateStatus': {
+      const id = Number(formData.get('id'));
+      const status = formData.get('status');
+
+      const updatedProduct = await updateProductStatus({ id, status: status as keyof typeof ProductStatus });
+
+      if (!updatedProduct) throw new Error('Something went wrong');
+
+      return json({ ok: true });
+    }
+    case 'delete': {
+      console.log('deleting...');
+
+      const id = Number(formData.get('id'));
+
+      const response: Response = (await deleteProduct(id)) as Response;
+
+      if (response.status === 500) return json({ error: response.statusText });
+
+      return json({ ok: true });
+    }
+
+    default:
+      return json({ ok: false });
+  }
 };
 
 export default function AdminCatalog() {

@@ -6,16 +6,17 @@ type MyInputProps = {
   name: string;
   label: string;
   tags: string[];
+  selectedTags?: string[];
 };
 
-export const TagsSelect = ({ tags, name, label }: MyInputProps) => {
+export const TagsSelect = ({ tags, name, label, selectedTags = [] }: MyInputProps) => {
   const { error, getInputProps } = useField(name) as any;
 
   const animatedComponents = makeAnimated();
 
   return (
     <div>
-      <label id='tags-label' className='font-bold mb-4 block' htmlFor={name}>
+      <label id='tags-label' className='block mb-4 font-bold' htmlFor={name}>
         {label}
       </label>
       <Select
@@ -27,7 +28,7 @@ export const TagsSelect = ({ tags, name, label }: MyInputProps) => {
         {...getInputProps({ id: name })}
         getOptionLabel={(option: any) => option.name}
         getOptionValue={(option: any) => option.id.toString()}
-        defaultValue={[tags[0], tags[1]]}
+        defaultValue={tags.filter((tag: any) => selectedTags.includes(tag.id.toString()))}
         isClearable={false}
         // closeMenuOnSelect={false}
         components={animatedComponents}

@@ -9,10 +9,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '~/components/ui/alert-dialog';
+
+import type { AddProduct } from '~/common/productSchema';
 import type { FormErrors } from './AdminNewProductLayout';
 import { FormInput } from '~/components/ui/custom/FormInput';
 import { ProductOptionSelect } from '~/components/ui/custom/ProductOptionSelect';
-import type { AddProduct } from '~/common/productSchema';
 
 export default function ProductVariants({
   options,

@@ -4,17 +4,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '~/components/ui/custom/dropdown-menu';
-import { Form, Link, useLoaderData, useNavigate, useNavigation, useSearchParams, useSubmit } from '@remix-run/react';
+import { Form, useLoaderData, useNavigate, useNavigation, useSearchParams, useSubmit } from '@remix-run/react';
 import { PiCaretDownBold, PiSpinnerLight } from 'react-icons/pi/index.js';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs';
-import { TbSortAscendingNumbers, TbSortDescendingNumbers } from 'react-icons/tb/index.js';
 import { useEffect, useState } from 'react';
 
 import { Button } from '~/components/ui/button';
 import { PaginationBar } from '~/components/ui/custom/PaginationBar';
+import { ProductCell } from './ProductCell';
+import { ProductStatus } from '@prisma/client';
 import type { loader } from '~/routes/admin.products._index';
-import numeral from 'numeral';
 
 export default function AdminProductsLayout() {
   const {
@@ -23,8 +23,6 @@ export default function AdminProductsLayout() {
     products,
     total,
     $top = '10',
-    order = 'asc',
-    orderBy = 'id',
     categoryId = '',
     categories,
     tags,
@@ -48,24 +46,7 @@ export default function AdminProductsLayout() {
     setQuery(q || '');
   }, [q]);
 
-  const deleteProduct = async (id: number) => {
-    const response = confirm('Please confirm you want to delete this product.');
-    if (response) {
-      const deleteResponse = await fetch(`/admin/products/${id}/delete`, { method: 'POST' });
-      if (deleteResponse.ok) {
-        navigate('/admin/products');
-      } else {
-        if (confirm('Unable to delete product with orders. Move a product to the archive?')) {
-          const archiveResponse = await fetch(`/admin/products/${id}/archive`, { method: 'POST' });
-          if (archiveResponse.ok) {
-            navigate('/admin/products');
-          } else {
-            alert('Unable to archive product');
-          }
-        }
-      }
-    }
-  };
+  const productStatusesArr = Object.values(ProductStatus);
 
   return (
     <div className='mr-12'>
@@ -82,9 +63,9 @@ export default function AdminProductsLayout() {
             {categories.map(category => (
               <DropdownMenuItem
                 className='justify-end cursor-pointer'
-                key={category.id}
+                key={category.slug}
                 onClick={() => {
-                  navigate(`/admin/products/new?categoryId=${category.id}`);
+                  navigate(`/admin/products/new?category=${category.slug}`);
                 }}
               >
                 {category.name}
@@ -96,88 +77,29 @@ export default function AdminProductsLayout() {
       </div>
       <Tabs id='product-status--tabs' defaultValue='published' className='mb-8'>
         <TabsList className=' rounded-full bg-white space-x-2.5'>
-          <Form method='get' preventScrollReset>
-            <>
-              {[
-                ['status', 'published'],
-                ['$skip', '0'],
-                ...existingParams.filter(([key]) => {
-                  return key !== 'status' && key !== '$skip';
-                }),
-              ].map(([key, value]) => {
-                return <input key={key} type='hidden' name={key} value={value} />;
-              })}
-            </>
-            <TabsTrigger
-              type='submit'
-              value='published'
-              className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
-              data-state={status === 'published' ? 'active' : ''}
-            >
-              Published ({(groupProducts.find(group => group.name === 'published')?.count || 0).toString()})
-            </TabsTrigger>
-          </Form>
-          <Form method='get' preventScrollReset>
-            <>
-              {[
-                ['status', 'draft'],
-                ['$skip', '0'],
-                ...existingParams.filter(([key]) => key !== 'status' && key !== '$skip'),
-              ].map(([key, value]) => {
-                return <input key={key} type='hidden' name={key} value={value} />;
-              })}
-            </>
-            <TabsTrigger
-              type='submit'
-              value='draft'
-              className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
-              data-state={status === 'draft' ? 'active' : ''}
-            >
-              Drafts ({(groupProducts.find(group => group.name === 'draft')?.count || 0).toString()})
-            </TabsTrigger>
-          </Form>
-          <Form method='get' preventScrollReset>
-            <>
-              {[
-                ['status', 'hidden'],
-                ['$skip', '0'],
-                ...existingParams.filter(([key]) => {
-                  return key !== 'status' && key !== '$skip';
-                }),
-              ].map(([key, value]) => {
-                return <input key={key} type='hidden' name={key} value={value} />;
-              })}
-            </>
-            <TabsTrigger
-              type='submit'
-              value='hidden'
-              className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
-              data-state={status === 'hidden' ? 'active' : ''}
-            >
-              Hidden ({(groupProducts.find(group => group.name === 'hidden')?.count || 0).toString()})
-            </TabsTrigger>
-          </Form>
-          <Form method='get' preventScrollReset>
-            <>
-              {[
-                ['status', 'archived'],
-                ['$skip', '0'],
-                ...existingParams.filter(([key]) => {
-                  return key !== 'status' && key !== '$skip';
-                }),
-              ].map(([key, value]) => {
-                return <input key={key} type='hidden' name={key} value={value} />;
-              })}
-            </>
-            <TabsTrigger
-              type='submit'
-              value='archived'
-              className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
-              data-state={status === 'archived' ? 'active' : ''}
-            >
-              Archived ({(groupProducts.find(group => group.name === 'archived')?.count || 0).toString()})
-            </TabsTrigger>
-          </Form>
+          {productStatusesArr.map(productStatus => (
+            <Form key={productStatus} method='get' preventScrollReset>
+              <>
+                {[
+                  ['status', productStatus],
+                  ['$skip', '0'],
+                  ...existingParams.filter(([key]) => {
+                    return key !== 'status' && key !== '$skip';
+                  }),
+                ].map(([key, value]) => {
+                  return <input key={key} type='hidden' name={key} value={value} />;
+                })}
+              </>
+              <TabsTrigger
+                type='submit'
+                value={productStatus}
+                className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
+                data-state={status === productStatus ? 'active' : ''}
+              >
+                {productStatus} ({(groupProducts.find(group => group.name === productStatus)?.count || 0).toString()})
+              </TabsTrigger>
+            </Form>
+          ))}
         </TabsList>
       </Tabs>
       <section id='filter-list'>
@@ -324,28 +246,7 @@ export default function AdminProductsLayout() {
                   </DropdownMenu>
                 </div>
               </TableHead>
-              <TableHead className='w-40'>
-                <Form method='get' preventScrollReset>
-                  <>
-                    {[
-                      ['orderBy', orderBy === 'price' && order === 'desc' ? '' : 'price'],
-                      ['order', orderBy !== 'price' ? 'asc' : 'desc'],
-                      ...existingParams.filter(([key]) => key !== 'orderBy' && key !== 'order'),
-                    ].map(([key, value]) => {
-                      return <input key={key} type='hidden' name={key} value={value} />;
-                    })}
-                  </>
-                  <button className='flex items-center w-full space-x-2' type='submit'>
-                    <span>Price</span>
-                    {orderBy === 'price' &&
-                      (order === 'desc' ? (
-                        <TbSortDescendingNumbers className='w-4 h-4' />
-                      ) : (
-                        <TbSortAscendingNumbers className='w-4 h-4' />
-                      ))}
-                  </button>
-                </Form>
-              </TableHead>
+              <TableHead className='w-40'>Price</TableHead>
               <TableHead className=''>
                 <div className='flex items-center space-x-2'>
                   <div>Tag</div>
@@ -415,93 +316,9 @@ export default function AdminProductsLayout() {
           <TableBody>
             {products.length > 0 ? (
               products.map(product => (
-                <TableRow key={product.id} className='border-secondary-100 hover:bg-[#fffdf8]'>
+                <TableRow key={product.id} className={`border-secondary-100 hover:bg-[#fffdf8] `}>
                   {/* <TableCell className='w-10'>D</TableCell> */}
-                  <TableCell>
-                    <div className='flex items-center space-x-2'>
-                      <img
-                        className='w-16 h-16 rounded-md shrink-0'
-                        width={64}
-                        height={64}
-                        src={product.cover || '/static/assets/no-image.jpg'}
-                        alt=''
-                      />
-                      <div className='flex flex-col space-y-0.5'>
-                        <div className='text-sm font-bold'>{product.title}</div>
-                        <div className='text-xs font-normal text-secondary-500 line-clamp-1'>{product.description}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {product.productVariants.map(variant => {
-                      return (
-                        <div key={variant.id} className='flex items-center space-x-2.5'>
-                          <span>{numeral(variant.price).format('$0,0.00')}</span>
-                          <span>/</span>
-                          <img src='/static/assets/icons/jar_big.svg' alt='' />
-                          <span className='text-xs font-normal text-secondary-500 whitespace-nowrap'>
-                            {variant.optionValue.value} {variant.optionValue.unit}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </TableCell>
-                  <TableCell className='grid gap-1'>
-                    <div className='w-0 h-0 bg-secondary-500'></div>
-                    {product.tags &&
-                      product.tags.map((tag, i) => (
-                        <div
-                          key={i}
-                          className={`text-xs rounded-full px-2 py-1 w-fit text-white`}
-                          style={{ backgroundColor: tag.color }}
-                        >
-                          {tag.name}
-                        </div>
-                      ))}
-                  </TableCell>
-                  <TableCell>
-                    {product.productVariants.map(variant => {
-                      return (
-                        <div key={variant.id} className='flex items-center w-full space-x-2'>
-                          <div className='relative h-1 rounded-full w-14 bg-secondary-100'>
-                            <div
-                              className='absolute top-0 left-0 w-1/2 h-1 rounded-full bg-additional-green-100'
-                              // style={{ width: `${product.stock}%` }}
-                            ></div>
-                          </div>
-                          <div>{variant.quantity}</div>
-                        </div>
-                      );
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    <div className='flex items-center space-x-2'>
-                      <Link
-                        to={`/admin/products/${product.id}/edit`}
-                        className='flex items-center justify-center rounded-full w-9 h-9 bg-secondary-100'
-                      >
-                        <img className='w-5 h-5' src='/static/assets/icons/pencilBrown.svg' alt=''></img>
-                      </Link>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className='flex items-center justify-center rounded-full w-9 h-9 bg-secondary-100'>
-                            <img className='w-5 h-5' src='/static/assets/icons/dots.svg' alt='' />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align='end' className='min-w-0'>
-                          <DropdownMenuItem className='justify-end w-full whitespace-nowrap focus:bg-secondary-100 text-primary-brown focus:text-primary-brown'>
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => deleteProduct(product.id)}
-                            className='justify-end w-full whitespace-nowrap focus:bg-secondary-100 text-primary-brown focus:text-primary-brown'
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
+                  <ProductCell product={product as any} />
                 </TableRow>
               ))
             ) : (
