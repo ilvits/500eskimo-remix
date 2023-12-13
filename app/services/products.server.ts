@@ -67,7 +67,7 @@ export const getProducts = async ({
 }) => {
   const countRequest = {
     where: {
-      productStatus: (productStatus || 'published') as any,
+      productStatus: (productStatus || 'PUBLISHED') as any,
       categoryId: categoryId ? Number(categoryId) : undefined,
       title: {
         contains: q || undefined,
@@ -103,7 +103,7 @@ export const getProducts = async ({
       [orderBy || 'id']: order || 'asc',
     },
     where: {
-      productStatus: (productStatus || 'published') as any,
+      productStatus: (productStatus || 'PUBLISHED') as any,
       categoryId: categoryId ? Number(categoryId) : undefined,
       title: {
         // search: q ? `_${q}` : undefined,

@@ -17,7 +17,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { products, total, groupProducts, categories, tags } = await getProducts({
     $top: Number($top) || 10,
     $skip: Number($skip) || 0,
-    productStatus: status || 'published',
+    productStatus: status || 'PUBLISHED',
     orderBy: orderBy || 'id',
     order: order || 'asc',
     categoryId: categoryId || '',
@@ -45,31 +45,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const _action = formData.get('_action');
-  console.log('action: ', _action);
-
   switch (_action) {
     case 'updateStatus': {
       const id = Number(formData.get('id'));
       const status = formData.get('status');
-
       const updatedProduct = await updateProductStatus({ id, status: status as keyof typeof ProductStatus });
-
       if (!updatedProduct) throw new Error('Something went wrong');
-
       return json({ ok: true });
     }
     case 'delete': {
-      console.log('deleting...');
-
       const id = Number(formData.get('id'));
-
       const response: Response = (await deleteProduct(id)) as Response;
-
       if (response.status === 500) return json({ error: response.statusText });
-
       return json({ ok: true });
     }
-
     default:
       return json({ ok: false });
   }

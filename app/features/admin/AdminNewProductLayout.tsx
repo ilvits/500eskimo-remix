@@ -59,7 +59,7 @@ export default function AdminNewProductLayout() {
   const categorySlug = searchParams.get('category');
 
   const defaultValues: AddProduct = {
-    productStatus: 'draft',
+    productStatus: 'DRAFT',
     cover: '',
     title: '',
     description: '',
@@ -229,7 +229,7 @@ export default function AdminNewProductLayout() {
     <div>
       <h1 className='mb-8 text-2xl font-bold'>Add New Product</h1>
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
-        <input type='hidden' name='productStatus' value='draft' />
+        <input type='hidden' name='productStatus' value='DRAFT' />
         <input type='hidden' name='rating' value={0} />
         <input type='hidden' name='numReviews' value={0} />
         <input type='hidden' name='categorySlug' value={categorySlug || ''} />

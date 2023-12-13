@@ -7,7 +7,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const { status, page, limit, orderBy, order } = Object.fromEntries(url.searchParams.entries());
   const { products, total } = await getProducts({
-    productStatus: status || 'published',
+    productStatus: status || 'PUBLISHED',
     $top: Number(limit) || 10,
     $skip: Number(page) || 0,
     orderBy: orderBy || 'createdAt',
@@ -32,7 +32,7 @@ export default function Test() {
             <button
               className='px-8 py-2 rounded-full bg-primary font-medium text-base text-white'
               onClick={() => {
-                fetcher.submit({ status: 'published' }, { action: '/test', method: 'get' });
+                fetcher.submit({ status: 'PUBLISHED' }, { action: '/test', method: 'get' });
               }}
             >
               Published
@@ -42,7 +42,7 @@ export default function Test() {
             <button
               className='px-8 py-2 rounded-full bg-primary font-medium text-base text-white'
               onClick={() => {
-                fetcher.submit({ status: 'draft' }, { action: '/test', method: 'get' });
+                fetcher.submit({ status: 'DRAFT' }, { action: '/test', method: 'get' });
               }}
             >
               Drafts

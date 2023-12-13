@@ -30,8 +30,8 @@ export const ProductCell: FunctionComponent<{ product: ProductsExtended }> = ({ 
     if (fetcher.data) {
       if (fetcher.data.error) {
         alert(fetcher.data.error);
-        if (product.productStatus !== 'archived' && confirm('Move a product to the archive?'))
-          changeProductStatus(product.id, 'archived');
+        if (product.productStatus !== 'ARCHIVED' && confirm('Move a product to the archive?'))
+          changeProductStatus(product.id, 'ARCHIVED');
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

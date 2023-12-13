@@ -6,9 +6,9 @@ export default function MainNavigation() {
   const user = useLoaderData<typeof loader>();
 
   return (
-    <div className='h-[116px] w-full px-[70px] sticky top-0 backdrop-blur-md flex justify-between items-center z-50'>
+    <div className='h-[116px] w-full px-[70px] sticky top-0 backdrop-blur-md bg-background/70 flex justify-between items-center z-50'>
       <img src='/static/assets/logo/logo_main.svg' alt='' />
-      <nav className='flex justify-between items-center'>
+      <nav className='flex items-center justify-between'>
         <ul className='flex space-x-4'>
           <li>
             <Link to='/'>Home</Link>
@@ -37,7 +37,7 @@ export default function MainNavigation() {
                 <img src='/static/assets/icons/search.svg' alt='' />
               </Link>
               <li>
-                <NavLink to='/admin' className='flex space-x-2 items-center active:bg-secondary-50'>
+                <NavLink to='/admin' className='flex items-center space-x-2 active:bg-secondary-50'>
                   <img src='/static/assets/icons/account.svg' alt='' />
                   <div>Admin</div>
                 </NavLink>

@@ -18,7 +18,7 @@ export const productSchema = z.object({
   protein: z.coerce.number().min(1, 'Must be > 0'),
   fat: z.coerce.number().min(1, 'Must be > 0'),
   carbs: z.coerce.number().min(1, 'Must be > 0'),
-  productStatus: z.enum(['published', 'draft', 'archived']).default('published').optional(),
+  productStatus: z.enum(['PUBLISHED', 'DRAFT', 'ARCHIVED']).default('PUBLISHED').optional(),
   tagIds: z.string().or(z.array(z.string())).optional(),
   freeDelivery: z.coerce.boolean().default(false),
   productVariants: z.array(
@@ -44,7 +44,7 @@ export const editProductSchema = z.object({
   protein: z.coerce.number().min(1, 'Must be > 0'),
   fat: z.coerce.number().min(1, 'Must be > 0'),
   carbs: z.coerce.number().min(1, 'Must be > 0'),
-  productStatus: z.enum(['published', 'draft', 'archived']).default('published').optional(),
+  productStatus: z.enum(['PUBLISHED', 'DRAFT', 'ARCHIVED']).default('PUBLISHED').optional(),
   tagIds: z.string().or(z.array(z.string())).optional(),
   freeDelivery: z.coerce.boolean().default(false),
   productVariants: z.array(

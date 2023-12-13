@@ -8,6 +8,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '~/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
+
 import type { Coordinates, CropperRef, CropperState, DefaultSettings } from 'react-advanced-cropper';
 import { Cropper, getTransformedImageSize, retrieveSizeRestrictions } from 'react-advanced-cropper';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '~/components/ui/dialog';
@@ -289,7 +291,7 @@ export default function AdminEditProductLayout() {
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
         <input type='hidden' name='id' value={product?.id} />
         <input type='hidden' name='categorySlug' value={product?.category.slug} />
-        <input type='hidden' name='productStatus' value='draft' />
+        <input type='hidden' name='productStatus' value='DRAFT' />
         <input type='hidden' name='rating' value='0' />
         <input type='hidden' name='numReviews' value='0' />
         {/* //TODO: Rename cover_public_id to coverPublicId in db */}
@@ -299,7 +301,8 @@ export default function AdminEditProductLayout() {
         <div className='flex items-start w-full space-x-12'>
           <div className='w-3/5 space-y-8'>
             <FormInput type='text' name='title' id='title' label='Title' />
-            <FormTextarea className='mb-4' name='description' id='description' label='Description' />
+            <FormTextarea className='mb-4' name='description' id='description' label='Description' />\
+            {/* List of Product Variants */}
             <section>
               <div className='flex items-center justify-between w-full mb-2 '>
                 <h2
@@ -307,6 +310,16 @@ export default function AdminEditProductLayout() {
                 >
                   Product Variants ({productVariants.length})
                 </h2>
+                <div>
+                  <Tabs defaultValue='account' className='w-[400px]'>
+                    <TabsList>
+                      <TabsTrigger value='account'>Account</TabsTrigger>
+                      <TabsTrigger value='password'>Password</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value='account'>Make changes to your account here.</TabsContent>
+                    <TabsContent value='password'>Change your password here.</TabsContent>
+                  </Tabs>
+                </div>
                 <button
                   type='button'
                   onClick={addProductVariant}
@@ -326,6 +339,7 @@ export default function AdminEditProductLayout() {
                 />
               )}
             </section>
+            {/* Characteristics */}
             <div className='space-y-4'>
               <FormInput type='text' name='conditions' label='Characteristics' sublabel='Shelf life and conditions' />
               <div className='flex items-center space-x-4'>
@@ -336,10 +350,12 @@ export default function AdminEditProductLayout() {
               </div>
               <TagsSelect tags={tags} name='tagIds' label='Tags' selectedTags={product.tagIds} />
             </div>
+            {/* Free Delivery */}
             <label htmlFor='freeDelivery' className='flex items-center justify-between'>
               <p>Free Delivery</p>
               <Switch id='freeDelivery' name='freeDelivery' defaultChecked={product.freeDelivery} />
             </label>
+            {/* Submit buttons */}
             <div className='relative flex space-x-4'>
               <Button
                 type='submit'
@@ -384,6 +400,7 @@ export default function AdminEditProductLayout() {
               </Button>
             </div>
           </div>
+          {/* Product Cover & Images */}
           <div className='w-2/5'>
             <h2 className='mb-4 font-bold'>Product Cover</h2>
             <div className='space-y-3'>
@@ -563,6 +580,7 @@ export default function AdminEditProductLayout() {
             </div>
           </div>
         </div>
+        {/* Leaving page dialog */}
         <AlertDialog open={blocker.state === 'blocked'}>
           <AlertDialogContent>
             <AlertDialogHeader>

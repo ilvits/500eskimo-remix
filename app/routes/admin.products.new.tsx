@@ -42,7 +42,7 @@ export const action = async ({ request }: DataFunctionArgs) => {
   const createdProduct = await createProduct(fieldValues.data, images, categorySlug, tagIds);
   if (!createdProduct) throw new Error('Something went wrong');
 
-  return redirect('/admin/products?status=draft');
+  return redirect('/admin/products?status=DRAFT');
 };
 
 export default function AddNewProduct() {

@@ -1,6 +1,6 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch"]
+  provider = "prisma-client-js"
+  // previewFeatures = ["fullTextSearch"]
 }
 
 datasource db {
@@ -14,25 +14,25 @@ enum Role {
 }
 
 enum ProductStatus {
-  published
-  draft
-  archived
+  PUBLISHED
+  DRAFT
+  ARCHIVED
 }
 
 enum OrderStatus {
-  pending
-  shipped
-  delivered
+  PENDING
+  SHIPPED
+  DELIVERED
 }
 
 enum OrderDeliveryMethod {
-  delivery
-  pickup
+  DELIVERY
+  PICKUP
 }
 
 enum ProductVariantsStatus {
-  published
-  archived
+  PUBLISHED
+  ARCHIVED
 }
 
 model Users {
@@ -95,7 +95,7 @@ model Products {
   rating          Int?
   numReviews      Int?
   freeDelivery    Boolean           @default(false)
-  productStatus   ProductStatus     @default(draft)
+  productStatus   ProductStatus     @default(DRAFT)
   productVariants ProductVariants[]
   category        Categories        @relation(fields: [categoryId], references: [id])
   productImages   ProductImages[]
@@ -108,7 +108,7 @@ model ProductVariants {
   id            Int                   @id @unique @default(autoincrement())
   name          String                @default("")
   sku           String
-  status        ProductVariantsStatus @default(published)
+  status        ProductVariantsStatus @default(PUBLISHED)
   productId     Int
   optionValueId Int
   quantity      Int

@@ -18,7 +18,7 @@ import type { loader } from '~/routes/admin.products._index';
 
 export default function AdminProductsLayout() {
   const {
-    status = 'published',
+    status = 'PUBLISHED',
     groupProducts,
     products,
     total,
@@ -75,7 +75,7 @@ export default function AdminProductsLayout() {
         </DropdownMenu>
         {/* </Link> */}
       </div>
-      <Tabs id='product-status--tabs' defaultValue='published' className='mb-8'>
+      <Tabs id='product-status--tabs' defaultValue='PUBLISHED' className='mb-8'>
         <TabsList className=' rounded-full bg-white space-x-2.5'>
           {productStatusesArr.map(productStatus => (
             <Form key={productStatus} method='get' preventScrollReset>
