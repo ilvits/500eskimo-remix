@@ -18,7 +18,7 @@ export function FormInput({ name, label, sublabel, onChange, ...rest }: InputPro
         </label>
       )}
       {sublabel && (
-        <label htmlFor={name} className='text-sm mb-2.5 block'>
+        <label htmlFor={name} className='text-sm mb-2.5 block capitalize'>
           {sublabel}
         </label>
       )}

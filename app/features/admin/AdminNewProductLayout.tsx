@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/custom/dropdown-menu';
 import type { DropzoneOptions, FileRejection } from 'react-dropzone';
+import type { FormErrors, loader } from '~/routes/admin.products.new';
 import { useBlocker, useLoaderData, useNavigation, useSearchParams } from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -29,14 +30,9 @@ import ProductVariants from './ProductVariants';
 import { Switch } from '~/components/ui/switch';
 import { TagsSelect } from '~/components/ui/custom/TagsSelect';
 import { ValidatedForm } from 'remix-validated-form';
-import type { loader } from '~/routes/admin.products.new';
 import { productSchema } from '~/common/productSchema';
 import { useDropzone } from 'react-dropzone-esm';
 import { withZod } from '@remix-validated-form/with-zod';
-
-export type FormErrors = {
-  [key: string]: boolean;
-};
 
 const validator = withZod(productSchema);
 
@@ -74,7 +70,7 @@ export default function AdminNewProductLayout() {
       {
         name: '',
         price: 0,
-        sku: '',
+        SKU: '',
         quantity: 0,
         optionValueId: 0,
       },
@@ -200,7 +196,7 @@ export default function AdminNewProductLayout() {
   } as DropzoneOptions);
 
   const addProductVariant = () => {
-    setProductVariants(prev => [...prev, { name: '', sku: '', price: 0, quantity: 0, optionValueId: NaN }]);
+    setProductVariants(prev => [...prev, { name: '', SKU: '', price: 0, quantity: 0, optionValueId: NaN }]);
   };
 
   const removeProductVariant = (index: number) => {
@@ -212,7 +208,7 @@ export default function AdminNewProductLayout() {
       ...prev.slice(0, index + 1),
       {
         name: prev[index].name + ' copy',
-        sku: prev[index].sku,
+        SKU: prev[index].SKU,
         price: prev[index].price,
         quantity: prev[index].quantity,
         optionValueId: prev[index].optionValueId,

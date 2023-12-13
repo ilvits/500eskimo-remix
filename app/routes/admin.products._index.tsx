@@ -6,6 +6,10 @@ import type { ProductStatus } from '@prisma/client';
 import { authenticator } from '~/auth/authenticator.server';
 import { json } from '@remix-run/node';
 
+export type FormErrors = {
+  [key: string]: boolean;
+};
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticator.isAuthenticated(request, {
     failureRedirect: '/auth/sign-in',

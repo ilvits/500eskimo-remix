@@ -107,7 +107,7 @@ model Products {
 model ProductVariants {
   id            Int                   @id @unique @default(autoincrement())
   name          String                @default("")
-  sku           String
+  SKU           String
   status        ProductVariantsStatus @default(PUBLISHED)
   productId     Int
   optionValueId Int

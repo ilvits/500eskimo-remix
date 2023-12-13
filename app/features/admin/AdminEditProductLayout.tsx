@@ -8,8 +8,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '~/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
-
 import type { Coordinates, CropperRef, CropperState, DefaultSettings } from 'react-advanced-cropper';
 import { Cropper, getTransformedImageSize, retrieveSizeRestrictions } from 'react-advanced-cropper';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '~/components/ui/dialog';
@@ -20,15 +18,18 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/custom/dropdown-menu';
 import type { DropzoneOptions, FileRejection } from 'react-dropzone';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { useBlocker, useLoaderData, useNavigation } from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '~/components/ui/button';
 import type { EditProduct } from '~/common/productSchema';
+import { FormErrors } from '~/routes/admin.products._index';
 import { FormInput } from '~/components/ui/custom/FormInput';
 import { FormTextarea } from '~/components/ui/custom/FormTextarea';
 import { PiSpinnerLight } from 'react-icons/pi/index.js';
 import ProductVariants from './ProductVariants';
+import { ProductVariantsStatus } from '@prisma/client';
 import { Switch } from '~/components/ui/switch';
 import { TagsSelect } from '~/components/ui/custom/TagsSelect';
 import { ValidatedForm } from 'remix-validated-form';
@@ -37,15 +38,11 @@ import type { loader } from '~/routes/admin.products.$productId.edit';
 import { useDropzone } from 'react-dropzone-esm';
 import { withZod } from '@remix-validated-form/with-zod';
 
-export type FormErrors = {
-  [key: string]: boolean;
-};
-
 interface ProductVariantWithOptionValue extends EditProduct {
   productVariants: {
     id: number;
     name: string;
-    sku: string;
+    SKU: string;
     price: number;
     quantity: number;
     optionValueId: number;
@@ -54,6 +51,7 @@ interface ProductVariantWithOptionValue extends EditProduct {
       value: string;
       unit: string;
     };
+    status: ProductVariantsStatus;
   }[];
 }
 
@@ -92,7 +90,7 @@ export default function AdminEditProductLayout() {
             id: 0,
             name: '',
             price: 0,
-            sku: '',
+            SKU: '',
             quantity: 0,
             optionValueId: 0,
           },
@@ -129,10 +127,11 @@ export default function AdminEditProductLayout() {
           return {
             id: variant.id,
             name: variant.name,
-            sku: variant.sku,
+            SKU: variant.SKU,
             price: Number(variant.price),
             quantity: Number(variant.quantity),
             optionValueId: Number(variant.optionValue.id),
+            status: variant.status,
           };
         }) || []
       );
@@ -258,7 +257,10 @@ export default function AdminEditProductLayout() {
   } as DropzoneOptions);
 
   const addProductVariant = () => {
-    setProductVariants(prev => [...prev, { name: '', sku: '', price: 0, quantity: 0, optionValueId: NaN }]);
+    setProductVariants(prev => [
+      ...prev,
+      { name: '', SKU: '', price: 0, quantity: 0, optionValueId: NaN, status: 'PUBLISHED' },
+    ]);
   };
 
   const removeProductVariant = (index: number) => {
@@ -270,10 +272,11 @@ export default function AdminEditProductLayout() {
       ...prev.slice(0, index + 1),
       {
         name: prev[index].name + ' copy',
-        sku: prev[index].sku,
+        SKU: prev[index].SKU,
         price: prev[index].price,
         quantity: prev[index].quantity,
         optionValueId: prev[index].optionValueId,
+        status: 'PUBLISHED',
       },
       ...prev.slice(index + 1, prev.length),
     ]);
@@ -301,43 +304,67 @@ export default function AdminEditProductLayout() {
         <div className='flex items-start w-full space-x-12'>
           <div className='w-3/5 space-y-8'>
             <FormInput type='text' name='title' id='title' label='Title' />
-            <FormTextarea className='mb-4' name='description' id='description' label='Description' />\
+            <FormTextarea className='mb-4' name='description' id='description' label='Description' />
             {/* List of Product Variants */}
             <section>
-              <div className='flex items-center justify-between w-full mb-2 '>
-                <h2
-                  className={`text-lg font-bold ${formErrors.productVariants && '!text-additional-red animate-shake'}`}
-                >
-                  Product Variants ({productVariants.length})
-                </h2>
-                <div>
-                  <Tabs defaultValue='account' className='w-[400px]'>
-                    <TabsList>
-                      <TabsTrigger value='account'>Account</TabsTrigger>
-                      <TabsTrigger value='password'>Password</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value='account'>Make changes to your account here.</TabsContent>
-                    <TabsContent value='password'>Change your password here.</TabsContent>
-                  </Tabs>
+              <Tabs defaultValue='PUBLISHED'>
+                <div className='flex items-center justify-between w-full mb-2 '>
+                  <h2
+                    className={`text-lg font-bold ${
+                      formErrors.productVariants && '!text-additional-red animate-shake'
+                    }`}
+                  >
+                    Packaging Option
+                  </h2>
+                  <button
+                    type='button'
+                    onClick={addProductVariant}
+                    className='flex items-center justify-center text-2xl text-white rounded-full w-9 h-9 bg-primary'
+                  >
+                    +
+                  </button>
                 </div>
-                <button
-                  type='button'
-                  onClick={addProductVariant}
-                  className='flex items-center justify-center text-2xl text-white rounded-full w-9 h-9 bg-secondary-500'
-                >
-                  +
-                </button>
-              </div>
-              {productVariants.length > 0 && (
-                <ProductVariants
-                  options={options}
-                  formErrors={formErrors}
-                  productVariants={productVariants}
-                  setProductVariants={setProductVariants}
-                  duplicateProductVariant={duplicateProductVariant}
-                  removeProductVariant={removeProductVariant}
-                />
-              )}
+                <TabsList>
+                  {Object.keys(ProductVariantsStatus).map(status => (
+                    <TabsTrigger
+                      key={status}
+                      value={status}
+                      className='px-6 border rounded-full h-9 border-secondary-200 text-primary-brown bg-background data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100 capitalize'
+                    >
+                      {status.toLowerCase()}
+                      {productVariants.filter(productVariant => productVariant.status === status).length > 0 &&
+                        ' (' + productVariants.filter(productVariant => productVariant.status === status).length + ')'}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {Object.keys(ProductVariantsStatus).map((status, i) => (
+                  <>
+                    <TabsContent key={status} value={status}>
+                      <ProductVariants
+                        options={options}
+                        formErrors={formErrors}
+                        productVariants={
+                          productVariants
+                            .filter(productVariant => productVariant.status === status)
+                            .map(variant => {
+                              return {
+                                id: variant.id,
+                                name: variant.name,
+                                SKU: variant.SKU,
+                                price: variant.price,
+                                quantity: variant.quantity,
+                                optionValueId: variant.optionValueId,
+                              };
+                            }) as any
+                        }
+                        setProductVariants={setProductVariants}
+                        duplicateProductVariant={duplicateProductVariant}
+                        removeProductVariant={removeProductVariant}
+                      />
+                    </TabsContent>
+                  </>
+                ))}
+              </Tabs>
             </section>
             {/* Characteristics */}
             <div className='space-y-4'>
@@ -537,7 +564,7 @@ export default function AdminEditProductLayout() {
                   <div className='flex items-center justify-center w-full'>
                     <label
                       htmlFor='images'
-                      className='flex flex-col items-center justify-center w-full py-8 px-4 border-2 
+                      className='flex flex-col items-center justify-center w-full py-8 px-4 border-2 transition-colors duration-300
                         bg-[url("/static/assets/dashed-border.svg")] border-none shadow-none rounded-lg cursor-pointer dark:hover:bg-bray-800 
                       dark:bg-gray-700 hover:bg-secondary-50 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600'
                     >
@@ -549,7 +576,7 @@ export default function AdminEditProductLayout() {
                         <p className='font-semibold text-secondary-500 dark:text-secondary-500'>SVG, PNG, JPG</p>
                       </div>
                       <input name='images' className='hidden' {...getInputProps()} />
-                      {dropZoneErrors && (
+                      {dropZoneErrors.length > 0 && (
                         <ul className='w-full pl-4 mt-4 text-sm text-additional-red dark:text-additional-red'>
                           {dropZoneErrors.map(error => (
                             <li key={error}>{error}</li>
@@ -563,16 +590,16 @@ export default function AdminEditProductLayout() {
                   {files.map((file, i) => (
                     <div
                       key={i}
-                      className='relative p-2.5 flex items-center justify-center rounded-lg
-                       bg-secondary-100 [&>div.trash]:hover:opacity-100 aspect-square w-full h-auto'
+                      className='relative flex items-center justify-center rounded-lg
+                       bg-secondary-50 [&>div.trash]:hover:opacity-100 aspect-square w-auto h-auto'
                     >
                       <div
-                        className='trash absolute right-[5px] top-[3px] cursor-pointer opacity-0'
+                        className='trash absolute -right-3 -top-3  cursor-pointer opacity-0 bg-secondary-500 rounded-full p-1.5 transition-opacity'
                         onClick={() => setFiles(prev => prev.filter(f => f !== file))}
                       >
-                        <img className='z-10 w-6 h-6' src='/static/assets/icons/trash.svg' alt='' />
+                        <img className='z-10 w-6 h-6' src='/static/assets/icons/trash-white.svg' alt='' />
                       </div>
-                      <img className='max-w-24 max-h-24 rounded-sm bg-[#F6F4EF]' src={file} alt='' />
+                      <img className='rounded-sm bg-[#F6F4EF]' src={file} alt='' />
                     </div>
                   ))}
                 </div>

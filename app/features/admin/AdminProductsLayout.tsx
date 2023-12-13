@@ -60,23 +60,27 @@ export default function AdminProductsLayout() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
-            {categories.map(category => (
-              <DropdownMenuItem
-                className='justify-end cursor-pointer'
-                key={category.slug}
-                onClick={() => {
-                  navigate(`/admin/products/new?category=${category.slug}`);
-                }}
-              >
-                {category.name}
-              </DropdownMenuItem>
-            ))}
+            {categories.length ? (
+              categories.map(category => (
+                <DropdownMenuItem
+                  className='justify-end cursor-pointer'
+                  key={category.slug}
+                  onClick={() => {
+                    navigate(`/admin/products/new?category=${category.slug}`);
+                  }}
+                >
+                  {category.name}
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem>No Categories. Please create one.</DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         {/* </Link> */}
       </div>
       <Tabs id='product-status--tabs' defaultValue='PUBLISHED' className='mb-8'>
-        <TabsList className=' rounded-full bg-white space-x-2.5'>
+        <TabsList className='rounded-full bg-white space-x-2.5'>
           {productStatusesArr.map(productStatus => (
             <Form key={productStatus} method='get' preventScrollReset>
               <>
@@ -93,10 +97,11 @@ export default function AdminProductsLayout() {
               <TabsTrigger
                 type='submit'
                 value={productStatus}
-                className='px-6 py-1.5 rounded-full text-foreground bg-white border border-primary-brown data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100'
+                className='px-6 py-1.5 rounded-full text-foreground bg-white border border-secondary-200 data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100 capitalize'
                 data-state={status === productStatus ? 'active' : ''}
               >
-                {productStatus} ({(groupProducts.find(group => group.name === productStatus)?.count || 0).toString()})
+                {productStatus.toLocaleLowerCase()} (
+                {(groupProducts.find(group => group.name === productStatus)?.count || 0).toString()})
               </TabsTrigger>
             </Form>
           ))}

@@ -1,27 +1,43 @@
-import type { FormErrors } from '~/routes/admin.products.new';
+import type { FormErrors } from '~/routes/admin.products._index';
 import makeAnimated from 'react-select/animated';
 import { useField } from 'remix-validated-form';
 import Select, { type Props } from 'react-select';
 
 type MyInputProps = {
   name: string;
-  label: string;
+  label?: string;
+  sublabel?: string;
   options: string[];
   defaultValue?: string;
   formErrors?: FormErrors;
   onChange: (option: any) => void;
 };
 
-export const ProductOptionSelect = ({ options, name, label, formErrors, onChange, defaultValue }: MyInputProps) => {
+export const ProductOptionSelect = ({
+  options,
+  name,
+  label,
+  sublabel,
+  formErrors,
+  onChange,
+  defaultValue,
+}: MyInputProps) => {
   const { error, getInputProps } = useField(name);
 
   const animatedComponents = makeAnimated();
 
   return (
     <div>
-      <label id={`${label}-label`} className='block mb-4 font-bold' htmlFor={name}>
-        {label}
-      </label>
+      {label && (
+        <label id={`${label}-label`} className='block mb-4 font-bold' htmlFor={name}>
+          {label}
+        </label>
+      )}
+      {sublabel && (
+        <label htmlFor={name} className='text-sm mb-2.5 block capitalize'>
+          {sublabel}
+        </label>
+      )}
       <Select
         aria-labelledby={`${label}-label`}
         options={options}

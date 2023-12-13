@@ -25,7 +25,7 @@ export const productSchema = z.object({
     z.object({
       name: z.string({ required_error: 'Name is required' }).min(3, 'Must contain at least 3 chars'),
       price: z.coerce.number().default(0).optional(),
-      sku: z.string().optional().optional(),
+      SKU: z.string().optional().optional(),
       quantity: z.coerce.number().default(0).optional(),
       optionValueId: z.coerce.number({ required_error: 'Option value is required' }),
     })
@@ -52,9 +52,10 @@ export const editProductSchema = z.object({
       id: z.coerce.number().optional(),
       name: z.string({ required_error: 'Name is required' }).min(3, 'Must contain at least 3 chars'),
       price: z.coerce.number().default(0).optional(),
-      sku: z.string().optional().optional(),
+      SKU: z.string().optional().optional(),
       quantity: z.coerce.number().default(0).optional(),
       optionValueId: z.coerce.number({ required_error: 'Option value is required' }),
+      status: z.enum(['PUBLISHED', 'ARCHIVED']).default('PUBLISHED'),
     })
   ),
 });

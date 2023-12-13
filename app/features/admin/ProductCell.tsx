@@ -51,7 +51,6 @@ export const ProductCell: FunctionComponent<{ product: ProductsExtended }> = ({ 
           <div className='flex flex-col space-y-0.5'>
             <div className='text-sm font-bold'>{product.title}</div>
             <div className='text-xs font-normal text-secondary-500 line-clamp-1'>{product.description}</div>
-            {JSON.stringify(product.freeDelivery)}
           </div>
         </div>
       </TableCell>
@@ -89,7 +88,16 @@ export const ProductCell: FunctionComponent<{ product: ProductsExtended }> = ({ 
               <div className='relative h-1 rounded-full w-14 bg-secondary-100'>
                 <div
                   className='absolute top-0 left-0 w-1/2 h-1 rounded-full bg-additional-green-100'
-                  // style={{ width: `${product.stock}%` }}
+                  style={{
+                    width: `${(100 * variant.quantity) / 1000}%`,
+                    backgroundColor: `${
+                      (100 * variant.quantity) / 1000 < 20
+                        ? '#D80D00'
+                        : (100 * variant.quantity) / 1000 < 50
+                        ? '#E9BD66'
+                        : '#A6B24F'
+                    }`,
+                  }}
                 ></div>
               </div>
               <div>{variant.quantity}</div>
@@ -122,13 +130,13 @@ export const ProductCell: FunctionComponent<{ product: ProductsExtended }> = ({ 
                   <DropdownMenuItem
                     key={status}
                     onClick={() => changeProductStatus(product.id, status)}
-                    className='justify-end w-full cursor-pointer whitespace-nowrap focus:bg-secondary-100 text-primary-brown focus:text-primary-brown'
+                    className='justify-end w-full space-x-1 cursor-pointer whitespace-nowrap focus:bg-secondary-100 text-primary-brown focus:text-primary-brown'
                   >
-                    <span>→</span>
-                    <span className='capitalize'>{status}</span>
+                    <span>→ </span>
+                    <span className='capitalize'> {status.toLocaleLowerCase()}</span>
                   </DropdownMenuItem>
                 ))}
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className='bg-secondary-100' />
               <DropdownMenuItem
                 className={`justify-end w-full cursor-pointer whitespace-nowrap focus:bg-secondary-100 text-primary-brown focus:text-primary-brown
                 ${product.orderItems.length ? 'cursor-not-allowed hover:!bg-secondary-50' : ''}`}

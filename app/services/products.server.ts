@@ -22,7 +22,7 @@ export interface ProductsExtended extends Products {
     value: string;
     unit: string;
   };
-  sku: string;
+  SKU: string;
   quantity: number;
   productVariants: {
     id: number;
@@ -31,7 +31,7 @@ export interface ProductsExtended extends Products {
       value: string;
       unit: string;
     };
-    sku: string;
+    SKU: string;
     quantity: number;
   }[];
   orderItems: {
@@ -320,6 +320,17 @@ export const updateProduct = async (
 
   invariant(updateImages, 'Unable to update images');
 
+  const deletedProductVariants = await prisma.productVariants.deleteMany({
+    where: {
+      productId,
+      id: {
+        notIn: productVariants.map((variant: any) => variant.id),
+      },
+    },
+  });
+
+  invariant(deletedProductVariants, 'Unable to delete product variants');
+
   const createProductVariants = await prisma.productVariants.createMany({
     data: productVariants
       .filter((variant: any) => !variant.id)
@@ -390,7 +401,7 @@ export const getProduct = async (id: number) => {
         select: {
           id: true,
           name: true,
-          sku: true,
+          SKU: true,
           price: true,
           quantity: true,
           optionValue: {
@@ -398,6 +409,7 @@ export const getProduct = async (id: number) => {
               id: true,
             },
           },
+          status: true,
         },
       },
     },
