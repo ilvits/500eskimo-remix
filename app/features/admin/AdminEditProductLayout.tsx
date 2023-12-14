@@ -24,7 +24,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '~/components/ui/button';
 import type { EditProduct } from '~/common/productSchema';
-import { FormErrors } from '~/routes/admin.products._index';
+import type { FormErrors } from '~/routes/admin.products._index';
 import { FormInput } from '~/components/ui/custom/FormInput';
 import { FormTextarea } from '~/components/ui/custom/FormTextarea';
 import { PiSpinnerLight } from 'react-icons/pi/index.js';
@@ -35,6 +35,7 @@ import { TagsSelect } from '~/components/ui/custom/TagsSelect';
 import { ValidatedForm } from 'remix-validated-form';
 import { editProductSchema } from '~/common/productSchema';
 import type { loader } from '~/routes/admin.products.$productId.edit';
+import { toBase64 } from '~/lib/utils';
 import { useDropzone } from 'react-dropzone-esm';
 import { withZod } from '@remix-validated-form/with-zod';
 
@@ -52,25 +53,31 @@ interface ProductVariantWithOptionValue extends EditProduct {
       unit: string;
     };
     status: ProductVariantsStatus;
+    productImages?: {
+      productVariantId: number;
+      imageUrl: string;
+      imagePublicId: string;
+    }[];
   }[];
 }
 
 const validator = withZod(editProductSchema);
 
 export default function AdminEditProductLayout() {
+  const { tags, options, product, images } = useLoaderData<typeof loader>();
+
   const navigation = useNavigation();
   const cropperRef = useRef<CropperRef>(null);
 
   const [cover, setCover] = useState<string | null | undefined>(undefined);
   const [coverSrc, setCoverSrc] = useState<string | null | undefined>(null);
   const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
-  const [files, setFiles] = useState<string[]>([]);
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [productVariantsImages, setProductVariantsImages] = useState<object[]>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [dropZoneErrors, setDropZoneErrors] = useState<string[]>([]);
   const [productVariants, setProductVariants] = useState<EditProduct['productVariants']>([]);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
-
-  const { tags, options, product } = useLoaderData<typeof loader>();
 
   const defaultValues: EditProduct = product
     ? product
@@ -119,7 +126,7 @@ export default function AdminEditProductLayout() {
         const data = await fetch(image.imageUrl).then(res => res.arrayBuffer());
         const blob = new Blob([data], { type: 'image/webp' });
         const base64 = (await toBase64(blob)) as string;
-        setFiles(prevState => (prevState.includes(base64) ? prevState : prevState.concat(base64)));
+        setProductImages(prevState => (prevState.includes(base64) ? prevState : prevState.concat(base64)));
       });
     product?.productVariants &&
       setProductVariants(
@@ -136,7 +143,6 @@ export default function AdminEditProductLayout() {
         }) || []
       );
   }, [product]);
-
   useEffect(() => {
     if (coverSrc) {
       const img = new Image();
@@ -146,17 +152,14 @@ export default function AdminEditProductLayout() {
       };
     }
   }, [coverSrc]);
-
   useEffect(() => {
     if (!coverSrc && cover) {
       setCoverSrc(cover);
     }
   }, [cover, coverSrc]);
-
   useEffect(() => {
     cover && setFormErrors((prevState: FormErrors) => ({ ...prevState, cover: false }));
   }, [cover]);
-
   useEffect(() => {
     productVariants.length > 0 && setFormErrors((prevState: FormErrors) => ({ ...prevState, productVariants: false }));
     productVariants.every(variant => variant.optionValueId) &&
@@ -164,15 +167,38 @@ export default function AdminEditProductLayout() {
     productVariants.every(variant => variant.name) &&
       setFormErrors((prevState: FormErrors) => ({ ...prevState, optionName: false }));
   }, [productVariants]);
-
-  const toBase64 = (file: File | Blob): Promise<string | ArrayBuffer | null> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = error => reject(error);
-    });
-
+  useEffect(() => {
+    console.log('productVariants: ', productVariants);
+  }, [productVariants]);
+  useEffect(() => {
+    console.log('productVariantsImages: ', productVariantsImages);
+  }, [productVariantsImages]);
+  useEffect(() => {
+    productVariantsImages.length === 0 &&
+      Promise.all(
+        productVariants
+          .filter((variant: EditProduct['productVariants'][0]) => variant.id)
+          .map(async (variant: EditProduct['productVariants'][0]) => {
+            return {
+              id: variant.id,
+              images: await Promise.all(
+                images
+                  .filter((image: { productVariantId: number }) => image.productVariantId === variant.id)
+                  .map(async (image: { imageUrl: string }) => {
+                    const data = await fetch(image.imageUrl).then(res => res.arrayBuffer());
+                    const blob = new Blob([data], { type: 'image/webp' });
+                    const base64 = (await toBase64(blob)) as string;
+                    return base64;
+                  })
+              ),
+            };
+          })
+      ).then(data => {
+        setProductVariantsImages(data);
+        console.dir('productVariantsImages : ', productVariantsImages);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images, productVariants]);
   const defaultSize = ({ imageSize, visibleArea }: CropperState) => {
     return {
       width: (visibleArea || imageSize).width,
@@ -181,9 +207,7 @@ export default function AdminEditProductLayout() {
   };
   const percentsRestriction = (state: CropperState, settings: DefaultSettings) => {
     const { maxWidth, maxHeight } = retrieveSizeRestrictions(settings);
-
     const imageSize = getTransformedImageSize(state);
-
     return {
       minWidth: (20 / 100) * imageSize.width,
       minHeight: (20 / 100) * imageSize.height,
@@ -250,7 +274,7 @@ export default function AdminEditProductLayout() {
       !fileRejections.length && setDropZoneErrors([]);
       acceptedFiles.forEach((file: File) => {
         toBase64(file).then(base64 => {
-          setFiles(prev => (prev.includes(base64 as string) ? prev : [...prev, base64 as string]));
+          setProductImages(prev => (prev.includes(base64 as string) ? prev : [...prev, base64 as string]));
         });
       });
     },
@@ -261,10 +285,12 @@ export default function AdminEditProductLayout() {
       ...prev,
       { name: '', SKU: '', price: 0, quantity: 0, optionValueId: NaN, status: 'PUBLISHED' },
     ]);
+    setProductVariantsImages(prev => [...prev, { id: NaN, images: [] }]);
   };
 
   const removeProductVariant = (index: number) => {
     setProductVariants(prev => prev.filter((_, i) => i !== index));
+    setProductVariantsImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const duplicateProductVariant = (index: number) => {
@@ -280,10 +306,18 @@ export default function AdminEditProductLayout() {
       },
       ...prev.slice(index + 1, prev.length),
     ]);
+    setProductVariantsImages(prev => [
+      ...prev.slice(0, index + 1),
+      {
+        id: prev[index].id,
+        images: prev[index].images,
+      },
+      ...prev.slice(index + 1, prev.length),
+    ]);
   };
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      (productVariants.length !== 0 || files || cover) && currentLocation.pathname !== nextLocation.pathname
+      (productVariants.length !== 0 || productImages || cover) && currentLocation.pathname !== nextLocation.pathname
   );
 
   return (
@@ -294,40 +328,42 @@ export default function AdminEditProductLayout() {
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
         <input type='hidden' name='id' value={product?.id} />
         <input type='hidden' name='categorySlug' value={product?.category.slug} />
-        <input type='hidden' name='productStatus' value='DRAFT' />
+        <input type='hidden' name='productStatus' value={product?.productStatus} />
         <input type='hidden' name='rating' value='0' />
         <input type='hidden' name='numReviews' value='0' />
         {/* //TODO: Rename cover_public_id to coverPublicId in db */}
         <input type='hidden' name='coverPublicId' value={product?.cover_public_id} />
         {cover && <input type='hidden' name='cover' value={cover} />}
-        {files && files.map((file, i) => <input key={i} type='hidden' name='images' value={file} />)}
+        {productImages.length > 0 &&
+          productImages.map((file, i) => <input key={i} type='hidden' name='productImages' value={file} />)}
+        {productVariantsImages.length > 0 && (
+          <input type='hidden' name='productVariantsImages' value={JSON.stringify(productVariantsImages)} />
+        )}
         <div className='flex items-start w-full space-x-12'>
           <div className='w-3/5 space-y-8'>
             <FormInput type='text' name='title' id='title' label='Title' />
             <FormTextarea className='mb-4' name='description' id='description' label='Description' />
             {/* List of Product Variants */}
             <section>
+              <div className='flex items-center justify-between w-full mb-2 '>
+                <h2
+                  className={`text-lg font-bold ${formErrors.productVariants && '!text-additional-red animate-shake'}`}
+                >
+                  Packaging Option
+                </h2>
+                <button
+                  type='button'
+                  onClick={addProductVariant}
+                  className='flex items-center justify-center text-2xl text-white rounded-full w-9 h-9 bg-primary'
+                >
+                  +
+                </button>
+              </div>
               <Tabs defaultValue='PUBLISHED'>
-                <div className='flex items-center justify-between w-full mb-2 '>
-                  <h2
-                    className={`text-lg font-bold ${
-                      formErrors.productVariants && '!text-additional-red animate-shake'
-                    }`}
-                  >
-                    Packaging Option
-                  </h2>
-                  <button
-                    type='button'
-                    onClick={addProductVariant}
-                    className='flex items-center justify-center text-2xl text-white rounded-full w-9 h-9 bg-primary'
-                  >
-                    +
-                  </button>
-                </div>
                 <TabsList>
-                  {Object.keys(ProductVariantsStatus).map(status => (
+                  {Object.keys(ProductVariantsStatus).map((status, i) => (
                     <TabsTrigger
-                      key={status}
+                      key={i}
                       value={status}
                       className='px-6 border rounded-full h-9 border-secondary-200 text-primary-brown bg-background data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100 capitalize'
                     >
@@ -338,31 +374,32 @@ export default function AdminEditProductLayout() {
                   ))}
                 </TabsList>
                 {Object.keys(ProductVariantsStatus).map((status, i) => (
-                  <>
-                    <TabsContent key={status} value={status}>
-                      <ProductVariants
-                        options={options}
-                        formErrors={formErrors}
-                        productVariants={
-                          productVariants
-                            .filter(productVariant => productVariant.status === status)
-                            .map(variant => {
-                              return {
-                                id: variant.id,
-                                name: variant.name,
-                                SKU: variant.SKU,
-                                price: variant.price,
-                                quantity: variant.quantity,
-                                optionValueId: variant.optionValueId,
-                              };
-                            }) as any
-                        }
-                        setProductVariants={setProductVariants}
-                        duplicateProductVariant={duplicateProductVariant}
-                        removeProductVariant={removeProductVariant}
-                      />
-                    </TabsContent>
-                  </>
+                  <TabsContent key={i} value={status}>
+                    <ProductVariants
+                      options={options}
+                      formErrors={formErrors}
+                      productVariantsImages={productVariantsImages}
+                      setProductVariantsImages={setProductVariantsImages}
+                      productVariants={
+                        productVariants
+                          .filter(productVariant => productVariant.status === status)
+                          .map(variant => {
+                            return {
+                              id: variant.id,
+                              name: variant.name,
+                              SKU: variant.SKU,
+                              price: variant.price,
+                              quantity: variant.quantity,
+                              optionValueId: variant.optionValueId,
+                            };
+                          }) as any
+                      }
+                      images={images}
+                      setProductVariants={setProductVariants}
+                      duplicateProductVariant={duplicateProductVariant}
+                      removeProductVariant={removeProductVariant}
+                    />
+                  </TabsContent>
                 ))}
               </Tabs>
             </section>
@@ -587,7 +624,7 @@ export default function AdminEditProductLayout() {
                   </div>
                 </div>
                 <div className='grid w-full grid-cols-3 gap-4 mt-4 grid-container'>
-                  {files.map((file, i) => (
+                  {productImages.map((file, i) => (
                     <div
                       key={i}
                       className='relative flex items-center justify-center rounded-lg
@@ -595,7 +632,7 @@ export default function AdminEditProductLayout() {
                     >
                       <div
                         className='trash absolute -right-3 -top-3  cursor-pointer opacity-0 bg-secondary-500 rounded-full p-1.5 transition-opacity'
-                        onClick={() => setFiles(prev => prev.filter(f => f !== file))}
+                        onClick={() => setProductImages(prev => prev.filter(f => f !== file))}
                       >
                         <img className='z-10 w-6 h-6' src='/static/assets/icons/trash-white.svg' alt='' />
                       </div>

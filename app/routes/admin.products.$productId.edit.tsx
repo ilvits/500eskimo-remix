@@ -1,5 +1,12 @@
 import type { ActionFunctionArgs, LinksFunction, LoaderFunction, LoaderFunctionArgs } from '@remix-run/node';
-import { getAllCategories, getAllTags, getOptions, getProduct, updateProduct } from '~/services/products.server';
+import {
+  getAllCategories,
+  getAllTags,
+  getImagesByProductId,
+  getOptions,
+  getProduct,
+  updateProduct,
+} from '~/services/products.server';
 import { json, redirect } from '@remix-run/node';
 
 import AdminEditProductLayout from '~/features/admin/AdminEditProductLayout';
@@ -25,12 +32,13 @@ export const links: LinksFunction = () => {
 
 export const loader: LoaderFunction = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.productId, 'Missing productId param');
-  const product = params.productId && (await getProduct(Number(params.productId)));
-
   const categories = await getAllCategories();
-  const tags = await getAllTags();
+  const product = params.productId && (await getProduct(Number(params.productId)));
+  const images = await getImagesByProductId(Number(params.productId));
   const options = await getOptions();
-  return json({ categories, tags, options, product });
+  const tags = await getAllTags();
+
+  return json({ categories, tags, options, product, images });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -46,12 +54,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const coverPublicId = formData.get('coverPublicId');
   const categorySlug = formData.get('categorySlug');
   const tagIds = formData.getAll('tagIds');
-  const images = formData.getAll('images');
+  const productImages = formData.getAll('productImages');
+  const productVariantsImages = formData.getAll('productVariantsImages').map(image => JSON.parse(image as string))[0];
+  console.log('productVariantsImages: ', productVariantsImages);
 
-  console.log('freeDelivery(formData): ', formData.get('freeDelivery'));
-  console.log('freeDelivery(fieldValues.data): ', fieldValues.data.freeDelivery);
-
-  const updatedProduct = await updateProduct(fieldValues.data, productId, categorySlug, coverPublicId, images, tagIds);
+  const updatedProduct = await updateProduct({
+    data: fieldValues.data,
+    productId,
+    categorySlug,
+    coverPublicId,
+    productImages,
+    productVariantsImages,
+    tagIds,
+  });
   // console.log('updatedProduct: ', updatedProduct);
 
   if (!updatedProduct) throw new Error('Something went wrong');

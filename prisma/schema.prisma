@@ -113,6 +113,8 @@ model ProductVariants {
   optionValueId Int
   quantity      Int
   price         Decimal               @db.Decimal(10, 2)
+  image         String                @default("")
+  publicId      String                @default("")
   options       Options[]
   product       Products              @relation(fields: [productId], references: [id], onDelete: Cascade)
   optionValue   OptionValues          @relation(fields: [optionValueId], references: [id])
@@ -148,13 +150,14 @@ model OptionValues {
 
 model ProductImages {
   id               Int              @id @default(autoincrement())
-  productId        Int
-  product          Products         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId        Int?
+  product          Products?        @relation(fields: [productId], references: [id], onDelete: Cascade)
   productVariantId Int?
   productVariant   ProductVariants? @relation(fields: [productVariantId], references: [id])
   imageUrl         String
   publicId         String?
-  asset_id         String?
+  assetId          String?
+  folder           String?
 }
 
 model Orders {

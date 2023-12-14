@@ -33,6 +33,8 @@ export interface ProductsExtended extends Products {
     };
     SKU: string;
     quantity: number;
+    status: ProductStatus;
+    image: string;
   }[];
   orderItems: {
     length: any;
@@ -237,14 +239,15 @@ export const createProduct = async (data: any, images: any, categorySlug: any, t
   return product;
 };
 
-export const updateProduct = async (
-  data: any,
-  productId: any,
-  categorySlug: any,
-  coverPublicId: any,
-  images: any,
-  tagIds: any
-) => {
+export const updateProduct = async ({
+  data,
+  productId,
+  categorySlug,
+  coverPublicId,
+  productImages,
+  productVariantsImages,
+  tagIds,
+}: any) => {
   data.slug = slugify(data.title);
   data.tagIds = tagIds;
   data.updatedAt = new Date();
@@ -277,9 +280,9 @@ export const updateProduct = async (
     data.cover = uploadedCover.secure_url || uploadedCover.url;
     coverPublicId = uploadedCover.public_id;
   }
-
+  console.log('productImages: ', productImages.length);
   const uploadedImages = await Promise.all(
-    images
+    productImages
       .filter((image: any) => image !== '')
       .map(async (image: any) => {
         const uploadedImage = (await cloudinary.v2.uploader.upload(
@@ -296,6 +299,33 @@ export const updateProduct = async (
         return uploadedImage;
       })
   );
+  console.log('uploadedImages: ', uploadedImages);
+
+  // console.log('uploadedVariantsImages: ', productVariantsImages);
+  const uploadedVariantsImages = await Promise.all(
+    productVariantsImages.map(async (imageSet: any) => {
+      return await Promise.all(
+        imageSet.images.map(async (image: any) => {
+          // console.log('set: ', set);
+          const uploadedImage = await cloudinary.v2.uploader.upload(
+            image,
+            { folder: `products/${categorySlug}/${data.slug}` },
+            function (error, result) {
+              // console.log('uploadedImage: ', result);
+              console.log('image uploaded');
+              if (error) {
+                console.log('error: ', error);
+              }
+            }
+          );
+          uploadedImage.productVariantId = imageSet.id;
+          return uploadedImage;
+        })
+      );
+    })
+  );
+
+  console.log('uploadedVariantsImages: ', uploadedVariantsImages.flat(1));
 
   // if (coverPublicId) {
   //   await cloudinary.v2.uploader.destroy(coverPublicId);
@@ -307,12 +337,32 @@ export const updateProduct = async (
         productId,
       },
     }),
+    prisma.productImages.deleteMany({
+      where: {
+        productVariantId: {
+          in: productVariants.map((variant: any) => variant.id),
+        },
+      },
+    }),
     prisma.productImages.createMany({
       data: uploadedImages.map(image => {
         return {
           productId,
           imageUrl: image.secure_url || image.url,
           publicId: image.public_id,
+          assetId: image.asset_id,
+          folder: image.folder,
+        };
+      }),
+    }),
+    prisma.productImages.createMany({
+      data: uploadedVariantsImages.flat(1).map(image => {
+        return {
+          productVariantId: image.productVariantId,
+          imageUrl: image.secure_url || image.url,
+          publicId: image.public_id,
+          assetId: image.asset_id,
+          folder: image.folder,
         };
       }),
     }),
@@ -360,6 +410,7 @@ export const updateProduct = async (
     );
 
   invariant(updatedProductVariants, 'Unable to update product variants');
+  console.log('data: ', data);
 
   const updatedProduct = await prisma.products.update({
     where: {
@@ -371,7 +422,6 @@ export const updateProduct = async (
   });
 
   invariant(updatedProduct, 'Unable to update product');
-
   return updatedProduct;
 };
 
@@ -409,13 +459,19 @@ export const getProduct = async (id: number) => {
               id: true,
             },
           },
+          productImages: {
+            select: {
+              imageUrl: true,
+              publicId: true,
+            },
+          },
           status: true,
         },
       },
     },
   });
   invariant(product, 'Unable to get product');
-  console.log('product: ', product);
+  // console.log('product: ', product);
 
   return product;
 };
@@ -505,6 +561,41 @@ export const changeProductStatus = async (id: number, status: keyof typeof Produ
   invariant(product, 'Unable to change product status');
   return product;
 };
+
+export const getImagesByProductId = async (productId: number) => {
+  const productVariantsIds = await prisma.productVariants
+    .findMany({
+      where: {
+        productId,
+      },
+    })
+    .then(productVariants => productVariants.map(productVariant => productVariant.id));
+
+  const productImages = await prisma.productImages.findMany({
+    where: {
+      OR: [
+        {
+          productId,
+        },
+        {
+          productVariantId: {
+            in: productVariantsIds,
+          },
+        },
+      ],
+    },
+    select: {
+      productId: true,
+      productVariantId: true,
+      imageUrl: true,
+      publicId: true,
+    },
+  });
+  invariant(productImages, 'Unable to get product images');
+  return productImages;
+};
+
+// console.log('Images: ', await getImagesByProductId(1));
 
 // cloudinary.api.delete_resources_by_prefix('products', (result: any) => {
 //   console.log(result);
