@@ -175,12 +175,8 @@ export const getProducts = async ({
   };
 };
 
-export const createProduct = async (data: any, images: any, categorySlug: any, tagIds: any) => {
-  const category = await prisma.categories.findFirst({
-    where: {
-      slug: categorySlug,
-    },
-  });
+export const createProduct = async ({ data, categorySlug, productImages, productVariantsImages, tagIds }: any) => {
+  const category = await getCategoryBySlug(categorySlug);
   data.categoryId = category?.id;
   data.slug = slugify(data.title);
   data.tagIds = tagIds;
@@ -201,15 +197,17 @@ export const createProduct = async (data: any, images: any, categorySlug: any, t
     data.cover_public_id = uploadedCover.public_id;
   }
 
+  console.log('productImages: ', productImages.length);
   const uploadedImages = await Promise.all(
-    images
+    productImages
       .filter((image: any) => image !== '')
       .map(async (image: any) => {
         const uploadedImage = (await cloudinary.v2.uploader.upload(
           image,
           { folder: `products/${categorySlug}/${data.slug}` },
           function (error, result) {
-            console.log('uploadedImage: ', result);
+            // console.log('uploadedImage: ', result);
+            console.log('image uploaded');
             if (error) {
               console.log('error: ', error);
             }
@@ -218,6 +216,33 @@ export const createProduct = async (data: any, images: any, categorySlug: any, t
         return uploadedImage;
       })
   );
+  console.log('uploadedImages: ', uploadedImages);
+
+  // console.log('uploadedVariantsImages: ', productVariantsImages);
+  const uploadedVariantsImages = await Promise.all(
+    productVariantsImages.map(async (imageSet: any) => {
+      return await Promise.all(
+        imageSet.images.map(async (image: any) => {
+          // console.log('set: ', set);
+          const uploadedImage = await cloudinary.v2.uploader.upload(
+            image,
+            { folder: `products/${categorySlug}/${data.slug}` },
+            function (error, result) {
+              // console.log('uploadedImage: ', result);
+              console.log('image uploaded');
+              if (error) {
+                console.log('error: ', error);
+              }
+            }
+          );
+          uploadedImage.productVariantId = imageSet.id;
+          return uploadedImage;
+        })
+      );
+    })
+  );
+
+  console.log('uploadedVariantsImages: ', uploadedVariantsImages);
 
   const product = await prisma.products.create({
     data: {
@@ -281,49 +306,54 @@ export const updateProduct = async ({
     coverPublicId = uploadedCover.public_id;
   }
   console.log('productImages: ', productImages.length);
-  const uploadedImages = await Promise.all(
-    productImages
-      .filter((image: any) => image !== '')
-      .map(async (image: any) => {
-        const uploadedImage = (await cloudinary.v2.uploader.upload(
-          image,
-          { folder: `products/${categorySlug}/${data.slug}` },
-          function (error, result) {
-            // console.log('uploadedImage: ', result);
-            console.log('image uploaded');
-            if (error) {
-              console.log('error: ', error);
-            }
-          }
-        )) as UploadedImage;
-        return uploadedImage;
-      })
-  );
+  const uploadedImages =
+    (productImages.filter((image: any) => image !== '').length > 0 &&
+      (await Promise.all(
+        productImages
+          .filter((image: any) => image !== '')
+          .map(async (image: any) => {
+            const uploadedImage = (await cloudinary.v2.uploader.upload(
+              image,
+              { folder: `products/${categorySlug}/${data.slug}` },
+              function (error, result) {
+                // console.log('uploadedImage: ', result);
+                console.log('image uploaded');
+                if (error) {
+                  console.log('error: ', error);
+                }
+              }
+            )) as UploadedImage;
+            return uploadedImage;
+          })
+      ))) ||
+    [];
   console.log('uploadedImages: ', uploadedImages);
 
-  // console.log('uploadedVariantsImages: ', productVariantsImages);
-  const uploadedVariantsImages = await Promise.all(
-    productVariantsImages.map(async (imageSet: any) => {
-      return await Promise.all(
-        imageSet.images.map(async (image: any) => {
-          // console.log('set: ', set);
-          const uploadedImage = await cloudinary.v2.uploader.upload(
-            image,
-            { folder: `products/${categorySlug}/${data.slug}` },
-            function (error, result) {
-              // console.log('uploadedImage: ', result);
-              console.log('image uploaded');
-              if (error) {
-                console.log('error: ', error);
+  console.log('productVariantsImages: ', productVariantsImages);
+  const uploadedVariantsImages =
+    productVariantsImages &&
+    (await Promise.all(
+      productVariantsImages.map(async (imageSet: any) => {
+        return await Promise.all(
+          imageSet.images.map(async (image: any) => {
+            // console.log('set: ', set);
+            const uploadedImage = await cloudinary.v2.uploader.upload(
+              image,
+              { folder: `products/${categorySlug}/${data.slug}` },
+              function (error, result) {
+                // console.log('uploadedImage: ', result);
+                console.log('image uploaded');
+                if (error) {
+                  console.log('error: ', error);
+                }
               }
-            }
-          );
-          uploadedImage.productVariantId = imageSet.id;
-          return uploadedImage;
-        })
-      );
-    })
-  );
+            );
+            uploadedImage.productVariantId = imageSet.id;
+            return uploadedImage;
+          })
+        );
+      }) || []
+    ));
 
   console.log('uploadedVariantsImages: ', uploadedVariantsImages.flat(1));
 
@@ -331,44 +361,54 @@ export const updateProduct = async ({
   //   await cloudinary.v2.uploader.destroy(coverPublicId);
   // }
 
-  const updateImages = await prisma.$transaction([
-    prisma.productImages.deleteMany({
-      where: {
-        productId,
-      },
-    }),
-    prisma.productImages.deleteMany({
-      where: {
-        productVariantId: {
-          in: productVariants.map((variant: any) => variant.id),
-        },
-      },
-    }),
-    prisma.productImages.createMany({
-      data: uploadedImages.map(image => {
-        return {
+  const updateImages =
+    uploadedImages.filter((image: any) => image !== null).length > 0 &&
+    (await prisma.$transaction([
+      prisma.productImages.deleteMany({
+        where: {
           productId,
-          imageUrl: image.secure_url || image.url,
-          publicId: image.public_id,
-          assetId: image.asset_id,
-          folder: image.folder,
-        };
+        },
       }),
-    }),
-    prisma.productImages.createMany({
-      data: uploadedVariantsImages.flat(1).map(image => {
-        return {
-          productVariantId: image.productVariantId,
-          imageUrl: image.secure_url || image.url,
-          publicId: image.public_id,
-          assetId: image.asset_id,
-          folder: image.folder,
-        };
+      prisma.productImages.createMany({
+        data: uploadedImages.map(image => {
+          return {
+            productId,
+            imageUrl: image.secure_url || image.url,
+            publicId: image.public_id,
+            assetId: image.asset_id,
+            folder: image.folder,
+          };
+        }),
       }),
-    }),
-  ]);
+    ]));
+  console.log('updateImages: ', updateImages);
 
   invariant(updateImages, 'Unable to update images');
+
+  const updateVariantsImages =
+    uploadedVariantsImages &&
+    (await prisma.$transaction([
+      prisma.productImages.deleteMany({
+        where: {
+          productVariantId: {
+            in: productVariants.map((variant: any) => variant.id),
+          },
+        },
+      }),
+      prisma.productImages.createMany({
+        data: uploadedVariantsImages.flat(1).map(image => {
+          return {
+            productVariantId: image.productVariantId,
+            imageUrl: image.secure_url || image.url,
+            publicId: image.public_id,
+            assetId: image.asset_id,
+            folder: image.folder,
+          };
+        }),
+      }),
+    ]));
+
+  invariant(updateVariantsImages, 'Unable to update variants images');
 
   const deletedProductVariants = await prisma.productVariants.deleteMany({
     where: {
@@ -410,7 +450,6 @@ export const updateProduct = async ({
     );
 
   invariant(updatedProductVariants, 'Unable to update product variants');
-  console.log('data: ', data);
 
   const updatedProduct = await prisma.products.update({
     where: {
@@ -487,6 +526,12 @@ export const getAllCategories = async () => {
   return categories;
 };
 
+export const getCategoryBySlug = async (slug: string) => {
+  const category = await prisma.categories.findUnique({ where: { slug } });
+  invariant(category, 'Unable to get category');
+  return category;
+};
+
 export const getTotalCategories = async () => {
   const result = await prisma.categories.count();
   return result;
@@ -517,6 +562,12 @@ export const getOptions = async () => {
   });
   invariant(options, 'Unable to get all options');
   return options;
+};
+
+export const getAllSorts = async () => {
+  const sorts = await prisma.sorts.findMany();
+  invariant(sorts, 'Unable to get all sorts');
+  return sorts;
 };
 
 export const deleteProduct = async (id: number) => {

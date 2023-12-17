@@ -14,6 +14,7 @@ import type { EditProduct } from '~/common/productSchema';
 import type { FormErrors } from '~/routes/admin.products._index';
 import { FormInput } from '~/components/ui/custom/FormInput';
 import { ProductOptionSelect } from '~/components/ui/custom/ProductOptionSelect';
+import type { productVariantsImages } from './AdminEditProductLayout';
 import { toBase64 } from '~/lib/utils';
 import { useDropzone } from 'react-dropzone-esm';
 
@@ -39,7 +40,7 @@ export default function ProductVariants({
   }[];
   formErrors: FormErrors;
   productVariantsImages: object[];
-  setProductVariantsImages: React.Dispatch<React.SetStateAction<object[]>>;
+  setProductVariantsImages: React.Dispatch<React.SetStateAction<productVariantsImages>>;
   productVariants: EditProduct['productVariants'];
   setProductVariants: React.Dispatch<React.SetStateAction<EditProduct['productVariants']>>;
   duplicateProductVariant: (index: number) => void;

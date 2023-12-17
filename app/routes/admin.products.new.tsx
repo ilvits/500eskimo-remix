@@ -1,5 +1,5 @@
 import type { DataFunctionArgs, LinksFunction, LoaderFunction } from '@remix-run/node';
-import { createProduct, getAllTags, getOptions } from '~/services/products.server';
+import { createProduct, getAllSorts, getAllTags, getCategoryBySlug, getOptions } from '~/services/products.server';
 import { json, redirect } from '@remix-run/node';
 
 import AdminNewProductLayout from '~/features/admin/AdminNewProductLayout';
@@ -22,10 +22,13 @@ export const links: LinksFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
   const tags = await getAllTags();
   const options = await getOptions();
-  return json({ tags, options });
+  const sorts = await getAllSorts();
+  const categorySlug = new URL(request.url).searchParams.get('category');
+  const category = categorySlug && (await getCategoryBySlug(categorySlug));
+  return json({ tags, options, sorts, category });
 };
 
 export const action = async ({ request }: DataFunctionArgs) => {
@@ -38,8 +41,17 @@ export const action = async ({ request }: DataFunctionArgs) => {
   console.log('categorySlug', categorySlug);
 
   const tagIds = formData.getAll('tagIds');
-  const images = formData.getAll('images');
-  const createdProduct = await createProduct(fieldValues.data, images, categorySlug, tagIds);
+  const productImages = formData.getAll('productImages');
+  const productVariantsImages = formData.getAll('productVariantsImages').map(image => JSON.parse(image as string))[0];
+  console.log('productVariantsImages: ', productVariantsImages);
+
+  const createdProduct = await createProduct({
+    data: fieldValues.data,
+    productImages,
+    productVariantsImages,
+    categorySlug,
+    tagIds,
+  });
   if (!createdProduct) throw new Error('Something went wrong');
 
   return redirect('/admin/products?status=DRAFT');

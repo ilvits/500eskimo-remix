@@ -2,7 +2,16 @@
 CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "ProductStatus" AS ENUM ('published', 'hidden', 'draft', 'archived');
+CREATE TYPE "ProductStatus" AS ENUM ('PUBLISHED', 'DRAFT', 'ARCHIVED');
+
+-- CreateEnum
+CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'SHIPPED', 'DELIVERED');
+
+-- CreateEnum
+CREATE TYPE "OrderDeliveryMethod" AS ENUM ('DELIVERY', 'PICKUP');
+
+-- CreateEnum
+CREATE TYPE "ProductVariantsStatus" AS ENUM ('PUBLISHED', 'ARCHIVED');
 
 -- CreateTable
 CREATE TABLE "Users" (
@@ -47,7 +56,7 @@ CREATE TABLE "Tags" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "color" TEXT NOT NULL,
+    "color" TEXT,
 
     CONSTRAINT "Tags_pkey" PRIMARY KEY ("id")
 );
@@ -55,18 +64,26 @@ CREATE TABLE "Tags" (
 -- CreateTable
 CREATE TABLE "Products" (
     "id" SERIAL NOT NULL,
+    "categoryId" INTEGER NOT NULL,
+    "sortId" INTEGER NOT NULL,
     "tagIds" TEXT[],
-    "tags" TEXT[],
     "title" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "categoryId" INTEGER NOT NULL,
     "description" TEXT,
-    "image" TEXT NOT NULL,
-    "rating" INTEGER NOT NULL,
-    "numReviews" INTEGER NOT NULL,
+    "conditions" TEXT,
+    "ingredients" TEXT,
+    "callories" INTEGER,
+    "protein" INTEGER,
+    "fat" INTEGER,
+    "carbs" INTEGER,
+    "cover" TEXT,
+    "cover_public_id" TEXT,
+    "rating" INTEGER,
+    "numReviews" INTEGER,
+    "freeDelivery" BOOLEAN NOT NULL DEFAULT false,
+    "productStatus" "ProductStatus" NOT NULL DEFAULT 'DRAFT',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "productStatus" "ProductStatus" NOT NULL DEFAULT 'draft',
 
     CONSTRAINT "Products_pkey" PRIMARY KEY ("id")
 );
@@ -74,11 +91,15 @@ CREATE TABLE "Products" (
 -- CreateTable
 CREATE TABLE "ProductVariants" (
     "id" SERIAL NOT NULL,
-    "sku" TEXT NOT NULL,
-    "price" DECIMAL(65,30) NOT NULL,
-    "quantity" INTEGER NOT NULL,
+    "name" TEXT NOT NULL DEFAULT '',
+    "SKU" TEXT NOT NULL,
+    "status" "ProductVariantsStatus" NOT NULL DEFAULT 'PUBLISHED',
     "productId" INTEGER NOT NULL,
     "optionValueId" INTEGER NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL,
+    "image" TEXT NOT NULL DEFAULT '',
+    "publicId" TEXT NOT NULL DEFAULT '',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -109,6 +130,19 @@ CREATE TABLE "OptionValues" (
 );
 
 -- CreateTable
+CREATE TABLE "ProductImages" (
+    "id" SERIAL NOT NULL,
+    "productId" INTEGER,
+    "productVariantId" INTEGER,
+    "imageUrl" TEXT NOT NULL,
+    "publicId" TEXT,
+    "assetId" TEXT,
+    "folder" TEXT,
+
+    CONSTRAINT "ProductImages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Orders" (
     "id" SERIAL NOT NULL,
     "userId" INTEGER NOT NULL,
@@ -117,9 +151,9 @@ CREATE TABLE "Orders" (
     "deliveryMethod" TEXT NOT NULL,
     "deliveredAt" TIMESTAMP(3) NOT NULL,
     "delivered" BOOLEAN NOT NULL,
+    "customersId" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "customersId" INTEGER,
 
     CONSTRAINT "Orders_pkey" PRIMARY KEY ("id")
 );
@@ -128,9 +162,10 @@ CREATE TABLE "Orders" (
 CREATE TABLE "OrderItems" (
     "id" SERIAL NOT NULL,
     "orderId" INTEGER NOT NULL,
-    "productId" INTEGER NOT NULL,
+    "productsId" INTEGER,
+    "productVariantId" INTEGER NOT NULL,
     "quantity" INTEGER NOT NULL,
-    "price" DECIMAL(65,30) NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "OrderItems_pkey" PRIMARY KEY ("id")
@@ -151,6 +186,27 @@ CREATE TABLE "Messages" (
     CONSTRAINT "Messages_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Sorts" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "description" TEXT,
+    "imageUrl" TEXT,
+    "publicId" TEXT,
+    "imageFolder" TEXT,
+    "assetId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Sorts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "_OptionsToProductVariants" (
+    "A" INTEGER NOT NULL,
+    "B" INTEGER NOT NULL
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Users_email_key" ON "Users"("email");
 
@@ -164,13 +220,28 @@ CREATE UNIQUE INDEX "Customers_email_key" ON "Customers"("email");
 CREATE INDEX "customer_username_idx" ON "Customers"("username");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Tags_name_key" ON "Tags"("name");
+CREATE UNIQUE INDEX "Categories_slug_key" ON "Categories"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Tags_slug_key" ON "Tags"("slug");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Products_id_key" ON "Products"("id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Products_slug_key" ON "Products"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProductVariants_id_key" ON "ProductVariants"("id");
+
+-- CreateIndex
+CREATE INDEX "product_variant_idx" ON "ProductVariants"("productId", "optionValueId");
+
+-- CreateIndex
+CREATE INDEX "product_variant_name_idx" ON "ProductVariants"("name");
+
+-- CreateIndex
+CREATE INDEX "customer_id_idx" ON "Orders"("customersId");
 
 -- CreateIndex
 CREATE INDEX "status_idx" ON "Orders"("status");
@@ -179,34 +250,43 @@ CREATE INDEX "status_idx" ON "Orders"("status");
 CREATE INDEX "total_idx" ON "Orders"("total");
 
 -- CreateIndex
-CREATE INDEX "user_id_idx" ON "Orders"("userId");
-
--- CreateIndex
-CREATE INDEX "delivered_at_idx" ON "Orders"("deliveredAt");
-
--- CreateIndex
-CREATE INDEX "delivered_idx" ON "Orders"("delivered");
-
--- CreateIndex
-CREATE INDEX "delivery_method_idx" ON "Orders"("deliveryMethod");
-
--- CreateIndex
 CREATE INDEX "created_at_idx" ON "Orders"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "updated_at_idx" ON "Orders"("updatedAt");
 
 -- CreateIndex
 CREATE INDEX "order_id_idx" ON "OrderItems"("orderId");
 
 -- CreateIndex
-CREATE INDEX "product_id_idx" ON "OrderItems"("productId");
+CREATE INDEX "product_id_idx" ON "OrderItems"("productsId");
+
+-- CreateIndex
+CREATE INDEX "product_variant_id_idx" ON "OrderItems"("productVariantId");
 
 -- CreateIndex
 CREATE INDEX "quantity_idx" ON "OrderItems"("quantity");
+
+-- CreateIndex
+CREATE INDEX "price_idx" ON "OrderItems"("price");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Sorts_slug_key" ON "Sorts"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_OptionsToProductVariants_AB_unique" ON "_OptionsToProductVariants"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_OptionsToProductVariants_B_index" ON "_OptionsToProductVariants"("B");
 
 -- AddForeignKey
 ALTER TABLE "Products" ADD CONSTRAINT "Products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProductVariants" ADD CONSTRAINT "ProductVariants_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Products" ADD CONSTRAINT "Products_sortId_fkey" FOREIGN KEY ("sortId") REFERENCES "Sorts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProductVariants" ADD CONSTRAINT "ProductVariants_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ProductVariants" ADD CONSTRAINT "ProductVariants_optionValueId_fkey" FOREIGN KEY ("optionValueId") REFERENCES "OptionValues"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -215,10 +295,28 @@ ALTER TABLE "ProductVariants" ADD CONSTRAINT "ProductVariants_optionValueId_fkey
 ALTER TABLE "OptionValues" ADD CONSTRAINT "OptionValues_optionId_fkey" FOREIGN KEY ("optionId") REFERENCES "Options"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "ProductImages" ADD CONSTRAINT "ProductImages_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProductImages" ADD CONSTRAINT "ProductImages_productVariantId_fkey" FOREIGN KEY ("productVariantId") REFERENCES "ProductVariants"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Orders" ADD CONSTRAINT "Orders_customersId_fkey" FOREIGN KEY ("customersId") REFERENCES "Customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrderItems" ADD CONSTRAINT "OrderItems_productsId_fkey" FOREIGN KEY ("productsId") REFERENCES "Products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrderItems" ADD CONSTRAINT "OrderItems_productVariantId_fkey" FOREIGN KEY ("productVariantId") REFERENCES "ProductVariants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OrderItems" ADD CONSTRAINT "OrderItems_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Messages" ADD CONSTRAINT "Messages_customersId_fkey" FOREIGN KEY ("customersId") REFERENCES "Customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_OptionsToProductVariants" ADD CONSTRAINT "_OptionsToProductVariants_A_fkey" FOREIGN KEY ("A") REFERENCES "Options"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_OptionsToProductVariants" ADD CONSTRAINT "_OptionsToProductVariants_B_fkey" FOREIGN KEY ("B") REFERENCES "ProductVariants"("id") ON DELETE CASCADE ON UPDATE CASCADE;

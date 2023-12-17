@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LinksFunction, LoaderFunction, LoaderFunctionArgs } from '@remix-run/node';
 import {
   getAllCategories,
+  getAllSorts,
   getAllTags,
   getImagesByProductId,
   getOptions,
@@ -37,8 +38,8 @@ export const loader: LoaderFunction = async ({ params }: LoaderFunctionArgs) => 
   const images = await getImagesByProductId(Number(params.productId));
   const options = await getOptions();
   const tags = await getAllTags();
-
-  return json({ categories, tags, options, product, images });
+  const sorts = await getAllSorts();
+  return json({ categories, tags, options, product, images, sorts });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -56,7 +57,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const tagIds = formData.getAll('tagIds');
   const productImages = formData.getAll('productImages');
   const productVariantsImages = formData.getAll('productVariantsImages').map(image => JSON.parse(image as string))[0];
-  console.log('productVariantsImages: ', productVariantsImages);
+  // console.log('productVariantsImages: ', productVariantsImages);
 
   const updatedProduct = await updateProduct({
     data: fieldValues.data,

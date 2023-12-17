@@ -26,6 +26,7 @@ import { Button } from '~/components/ui/button';
 import type { EditProduct } from '~/common/productSchema';
 import type { FormErrors } from '~/routes/admin.products._index';
 import { FormInput } from '~/components/ui/custom/FormInput';
+import { FormSelect } from '~/components/ui/custom/FormSelect';
 import { FormTextarea } from '~/components/ui/custom/FormTextarea';
 import { PiSpinnerLight } from 'react-icons/pi/index.js';
 import ProductVariants from './ProductVariants';
@@ -53,18 +54,18 @@ interface ProductVariantWithOptionValue extends EditProduct {
       unit: string;
     };
     status: ProductVariantsStatus;
-    productImages?: {
-      productVariantId: number;
-      imageUrl: string;
-      imagePublicId: string;
-    }[];
   }[];
 }
+
+export type productVariantsImages = {
+  id: number | undefined;
+  images: string[];
+}[];
 
 const validator = withZod(editProductSchema);
 
 export default function AdminEditProductLayout() {
-  const { tags, options, product, images } = useLoaderData<typeof loader>();
+  const { tags, options, product, images, sorts } = useLoaderData<typeof loader>();
 
   const navigation = useNavigation();
   const cropperRef = useRef<CropperRef>(null);
@@ -73,7 +74,7 @@ export default function AdminEditProductLayout() {
   const [coverSrc, setCoverSrc] = useState<string | null | undefined>(null);
   const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
   const [productImages, setProductImages] = useState<string[]>([]);
-  const [productVariantsImages, setProductVariantsImages] = useState<object[]>([]);
+  const [productVariantsImages, setProductVariantsImages] = useState<productVariantsImages>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [dropZoneErrors, setDropZoneErrors] = useState<string[]>([]);
   const [productVariants, setProductVariants] = useState<EditProduct['productVariants']>([]);
@@ -82,6 +83,7 @@ export default function AdminEditProductLayout() {
   const defaultValues: EditProduct = product
     ? product
     : {
+        sortId: 0,
         cover: '',
         title: '',
         description: '',
@@ -176,12 +178,11 @@ export default function AdminEditProductLayout() {
   useEffect(() => {
     productVariantsImages.length === 0 &&
       Promise.all(
-        productVariants
-          .filter((variant: EditProduct['productVariants'][0]) => variant.id)
-          .map(async (variant: EditProduct['productVariants'][0]) => {
-            return {
-              id: variant.id,
-              images: await Promise.all(
+        productVariants.map(async (variant: EditProduct['productVariants'][0]) => {
+          return {
+            id: variant.id,
+            images:
+              (await Promise.all(
                 images
                   .filter((image: { productVariantId: number }) => image.productVariantId === variant.id)
                   .map(async (image: { imageUrl: string }) => {
@@ -190,9 +191,9 @@ export default function AdminEditProductLayout() {
                     const base64 = (await toBase64(blob)) as string;
                     return base64;
                   })
-              ),
-            };
-          })
+              )) || [],
+          };
+        })
       ).then(data => {
         setProductVariantsImages(data);
         console.dir('productVariantsImages : ', productVariantsImages);
@@ -341,8 +342,18 @@ export default function AdminEditProductLayout() {
         )}
         <div className='flex items-start w-full space-x-12'>
           <div className='w-3/5 space-y-8'>
+            <FormSelect
+              name='sortId'
+              label='Sort'
+              options={sorts}
+              selectedOptions={[product?.sortId]}
+              placeholder='Choose sort...'
+            />
+
             <FormInput type='text' name='title' id='title' label='Title' />
             <FormTextarea className='mb-4' name='description' id='description' label='Description' />
+            <FormTextarea className='mb-4' name='ingredients' id='ingredients' label='Ingredients' />
+
             {/* List of Product Variants */}
             <section>
               <div className='flex items-center justify-between w-full mb-2 '>

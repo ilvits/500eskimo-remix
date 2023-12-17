@@ -64,7 +64,7 @@ model Customers {
 model Categories {
   id          Int        @id @default(autoincrement())
   name        String
-  slug        String
+  slug        String     @unique
   description String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @default(now())
@@ -72,20 +72,22 @@ model Categories {
 }
 
 model Tags {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  slug  String @unique
-  color String
+  id    Int     @id @default(autoincrement())
+  name  String
+  slug  String  @unique
+  color String?
 }
 
 model Products {
   id              Int               @id @unique @default(autoincrement())
   categoryId      Int
+  sortId          Int
   tagIds          String[]
   title           String
-  slug            String
+  slug            String            @unique
   description     String?
   conditions      String?
+  ingredients     String?
   callories       Int?
   protein         Int?
   fat             Int?
@@ -96,8 +98,9 @@ model Products {
   numReviews      Int?
   freeDelivery    Boolean           @default(false)
   productStatus   ProductStatus     @default(DRAFT)
-  productVariants ProductVariants[]
   category        Categories        @relation(fields: [categoryId], references: [id])
+  sort            Sorts             @relation(fields: [sortId], references: [id])
+  productVariants ProductVariants[]
   productImages   ProductImages[]
   orderItems      OrderItems[]
   createdAt       DateTime          @default(now())
@@ -211,4 +214,17 @@ model Messages {
   createdAt   DateTime   @default(now())
   customers   Customers? @relation(fields: [customersId], references: [id])
   customersId Int?
+}
+
+model Sorts {
+  id          Int        @id @default(autoincrement())
+  name        String
+  slug        String     @unique
+  description String?
+  imageUrl    String?
+  publicId    String?
+  imageFolder String?
+  assetId     String?
+  products    Products[]
+  createdAt   DateTime   @default(now())
 }

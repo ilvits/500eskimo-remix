@@ -18,47 +18,57 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/custom/dropdown-menu';
 import type { DropzoneOptions, FileRejection } from 'react-dropzone';
-import type { FormErrors, loader } from '~/routes/admin.products.new';
-import { useBlocker, useLoaderData, useNavigation, useSearchParams } from '@remix-run/react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
+import { useBlocker, useLoaderData, useNavigation } from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { AddProduct } from '~/common/productSchema';
 import { Button } from '~/components/ui/button';
+import type { FormErrors } from '~/routes/admin.products._index';
 import { FormInput } from '~/components/ui/custom/FormInput';
+import { FormSelect } from '~/components/ui/custom/FormSelect';
 import { FormTextarea } from '~/components/ui/custom/FormTextarea';
+import { PiSpinnerLight } from 'react-icons/pi/index.js';
 import ProductVariants from './ProductVariants';
+import { ProductVariantsStatus } from '@prisma/client';
 import { Switch } from '~/components/ui/switch';
 import { TagsSelect } from '~/components/ui/custom/TagsSelect';
 import { ValidatedForm } from 'remix-validated-form';
+import type { loader } from '~/routes/admin.products.new';
 import { productSchema } from '~/common/productSchema';
+import { toBase64 } from '~/lib/utils';
 import { useDropzone } from 'react-dropzone-esm';
 import { withZod } from '@remix-validated-form/with-zod';
+
+export type productVariantsImages = {
+  id: number | undefined;
+  images: string[];
+}[];
 
 const validator = withZod(productSchema);
 
 export default function AdminNewProductLayout() {
-  const navigation = useNavigation();
+  const { tags, options, images, sorts, category } = useLoaderData<typeof loader>();
   const cropperRef = useRef<CropperRef>(null);
+
+  const navigation = useNavigation();
 
   const [cover, setCover] = useState<string | null | undefined>(undefined);
   const [coverSrc, setCoverSrc] = useState<string | null | undefined>(null);
   const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
-  const [files, setFiles] = useState<string[]>([]);
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [productVariantsImages, setProductVariantsImages] = useState<productVariantsImages>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [dropZoneErrors, setDropZoneErrors] = useState<string[]>([]);
   const [productVariants, setProductVariants] = useState<AddProduct['productVariants']>([]);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
-  const { tags, options } = useLoaderData<typeof loader>();
-
-  const [searchParams] = useSearchParams();
-  const categorySlug = searchParams.get('category');
-
   const defaultValues: AddProduct = {
-    productStatus: 'DRAFT',
-    cover: '',
+    sortId: 0,
     title: '',
+    cover: '',
     description: '',
+    ingredients: '',
     conditions: '',
     callories: 0,
     protein: 0,
@@ -73,6 +83,7 @@ export default function AdminNewProductLayout() {
         SKU: '',
         quantity: 0,
         optionValueId: 0,
+        status: 'PUBLISHED',
       },
     ],
   };
@@ -86,17 +97,14 @@ export default function AdminNewProductLayout() {
       };
     }
   }, [coverSrc]);
-
   useEffect(() => {
     if (!coverSrc && cover) {
       setCoverSrc(cover);
     }
   }, [cover, coverSrc]);
-
   useEffect(() => {
     cover && setFormErrors((prevState: FormErrors) => ({ ...prevState, cover: false }));
   }, [cover]);
-
   useEffect(() => {
     productVariants.length > 0 && setFormErrors((prevState: FormErrors) => ({ ...prevState, productVariants: false }));
     productVariants.every(variant => variant.optionValueId) &&
@@ -104,14 +112,13 @@ export default function AdminNewProductLayout() {
     productVariants.every(variant => variant.name) &&
       setFormErrors((prevState: FormErrors) => ({ ...prevState, optionName: false }));
   }, [productVariants]);
+  useEffect(() => {
+    console.log('productVariants: ', productVariants);
+  }, [productVariants]);
+  useEffect(() => {
+    console.log('productVariantsImages: ', productVariantsImages);
+  }, [productVariantsImages]);
 
-  const toBase64 = (file: File): Promise<string | ArrayBuffer | null> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = error => reject(error);
-    });
   const defaultSize = ({ imageSize, visibleArea }: CropperState) => {
     return {
       width: (visibleArea || imageSize).width,
@@ -120,9 +127,7 @@ export default function AdminNewProductLayout() {
   };
   const percentsRestriction = (state: CropperState, settings: DefaultSettings) => {
     const { maxWidth, maxHeight } = retrieveSizeRestrictions(settings);
-
     const imageSize = getTransformedImageSize(state);
-
     return {
       minWidth: (20 / 100) * imageSize.width,
       minHeight: (20 / 100) * imageSize.height,
@@ -189,18 +194,23 @@ export default function AdminNewProductLayout() {
       !fileRejections.length && setDropZoneErrors([]);
       acceptedFiles.forEach((file: File) => {
         toBase64(file).then(base64 => {
-          setFiles(prev => (prev.includes(base64 as string) ? prev : [...prev, base64 as string]));
+          setProductImages(prev => (prev.includes(base64 as string) ? prev : [...prev, base64 as string]));
         });
       });
     },
   } as DropzoneOptions);
 
   const addProductVariant = () => {
-    setProductVariants(prev => [...prev, { name: '', SKU: '', price: 0, quantity: 0, optionValueId: NaN }]);
+    setProductVariants(prev => [
+      ...prev,
+      { name: '', SKU: '', price: 0, quantity: 0, optionValueId: NaN, status: 'PUBLISHED' },
+    ]);
+    setProductVariantsImages(prev => [...prev, { id: NaN, images: [] }]);
   };
 
   const removeProductVariant = (index: number) => {
     setProductVariants(prev => prev.filter((_, i) => i !== index));
+    setProductVariantsImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const duplicateProductVariant = (index: number) => {
@@ -212,55 +222,47 @@ export default function AdminNewProductLayout() {
         price: prev[index].price,
         quantity: prev[index].quantity,
         optionValueId: prev[index].optionValueId,
+        status: 'PUBLISHED',
+      },
+      ...prev.slice(index + 1, prev.length),
+    ]);
+    setProductVariantsImages(prev => [
+      ...prev.slice(0, index + 1),
+      {
+        id: prev[index].id,
+        images: prev[index].images,
       },
       ...prev.slice(index + 1, prev.length),
     ]);
   };
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      (productVariants.length !== 0 || files || cover) && currentLocation.pathname !== nextLocation.pathname
+      (productVariants.length !== 0 || productImages || cover) && currentLocation.pathname !== nextLocation.pathname
   );
 
   return (
     <div>
-      <h1 className='mb-8 text-2xl font-bold'>Add New Product</h1>
+      <h1 className='mb-8 text-2xl font-bold'>Add new Product ({category.name})</h1>
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
+        <input type='hidden' name='categorySlug' value={category.slug} />
         <input type='hidden' name='productStatus' value='DRAFT' />
-        <input type='hidden' name='rating' value={0} />
-        <input type='hidden' name='numReviews' value={0} />
-        <input type='hidden' name='categorySlug' value={categorySlug || ''} />
+        <input type='hidden' name='rating' value='0' />
+        <input type='hidden' name='numReviews' value='0' />
+        {/* //TODO: Rename cover_public_id to coverPublicId in db */}
+        {/* <input type='hidden' name='coverPublicId' value={product?.cover_public_id} /> */}
         {cover && <input type='hidden' name='cover' value={cover} />}
-        {files && files.map((file, i) => <input key={i} type='hidden' name='images' value={file} />)}
+        {productImages.length > 0 &&
+          productImages.map((file, i) => <input key={i} type='hidden' name='productImages' value={file} />)}
+        {productVariantsImages.length > 0 && (
+          <input type='hidden' name='productVariantsImages' value={JSON.stringify(productVariantsImages)} />
+        )}
         <div className='flex items-start w-full space-x-12'>
           <div className='w-3/5 space-y-8'>
+            <FormSelect name='sortId' label='Sort' options={sorts} placeholder='Choose sort...' />
             <FormInput type='text' name='title' id='title' label='Title' />
             <FormTextarea className='mb-4' name='description' id='description' label='Description' />
-            <section>
-              <div className='flex items-center justify-between w-full mb-2 '>
-                <h2
-                  className={`text-lg font-bold ${formErrors.productVariants && '!text-additional-red animate-shake'}`}
-                >
-                  Product Variants ({productVariants.length})
-                </h2>
-                <button
-                  type='button'
-                  onClick={addProductVariant}
-                  className='flex items-center justify-center text-2xl text-white rounded-full w-9 h-9 bg-secondary-500'
-                >
-                  +
-                </button>
-              </div>
-              {productVariants.length > 0 && (
-                <ProductVariants
-                  options={options}
-                  formErrors={formErrors}
-                  productVariants={productVariants}
-                  setProductVariants={setProductVariants}
-                  duplicateProductVariant={duplicateProductVariant}
-                  removeProductVariant={removeProductVariant}
-                />
-              )}
-            </section>
+            <FormTextarea className='mb-4' name='ingredients' id='ingredients' label='Ingredients' />
+            {/* Characteristics */}
             <div className='space-y-4'>
               <FormInput type='text' name='conditions' label='Characteristics' sublabel='Shelf life and conditions' />
               <div className='flex items-center space-x-4'>
@@ -269,14 +271,72 @@ export default function AdminNewProductLayout() {
                 <FormInput type='number' name='fat' sublabel='Fat' />
                 <FormInput type='number' name='carbs' sublabel='Carbs' />
               </div>
-              {/* <input type='hidden' name='tagIds' value={Array.from(tags).map(tag => tag.id.toString())} /> */}
               <TagsSelect tags={tags} name='tagIds' label='Tags' />
             </div>
+            {/* List of Product Variants */}
+            <section>
+              <div className='flex items-center justify-between w-full mb-2 '>
+                <h2 className={`font-bold ${formErrors.productVariants && '!text-additional-red animate-shake'}`}>
+                  Packaging Option
+                </h2>
+                <button
+                  type='button'
+                  onClick={addProductVariant}
+                  className='flex items-center justify-center text-2xl text-white rounded-full w-9 h-9 bg-primary'
+                >
+                  +
+                </button>
+              </div>
+              <Tabs defaultValue='PUBLISHED'>
+                <TabsList>
+                  {Object.keys(ProductVariantsStatus).map((status, i) => (
+                    <TabsTrigger
+                      key={i}
+                      value={status}
+                      className='px-6 border rounded-full h-9 border-secondary-200 text-primary-brown bg-background data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100 capitalize'
+                    >
+                      {status.toLowerCase()}
+                      {productVariants.filter(productVariant => productVariant.status === status).length > 0 &&
+                        ' (' + productVariants.filter(productVariant => productVariant.status === status).length + ')'}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {Object.keys(ProductVariantsStatus).map((status, i) => (
+                  <TabsContent key={i} value={status}>
+                    <ProductVariants
+                      options={options}
+                      formErrors={formErrors}
+                      productVariantsImages={productVariantsImages}
+                      setProductVariantsImages={setProductVariantsImages}
+                      productVariants={
+                        productVariants
+                          .filter(productVariant => productVariant.status === status)
+                          .map(variant => {
+                            return {
+                              name: variant.name,
+                              SKU: variant.SKU,
+                              price: variant.price,
+                              quantity: variant.quantity,
+                              optionValueId: variant.optionValueId,
+                            };
+                          }) as any
+                      }
+                      images={images}
+                      setProductVariants={setProductVariants}
+                      duplicateProductVariant={duplicateProductVariant}
+                      removeProductVariant={removeProductVariant}
+                    />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </section>
+            {/* Free Delivery */}
             <label htmlFor='freeDelivery' className='flex items-center justify-between'>
               <p>Free Delivery</p>
-              <Switch id='freeDelivery' name='freeDelivery' defaultChecked={defaultValues.freeDelivery} />
+              <Switch id='freeDelivery' name='freeDelivery' />
             </label>
-            <div className='flex space-x-4'>
+            {/* Submit buttons */}
+            <div className='relative flex space-x-4'>
               <Button
                 type='submit'
                 className='disabled:cursor-not-allowed disabled:opacity-50'
@@ -293,11 +353,23 @@ export default function AdminNewProductLayout() {
               >
                 Add Product
               </Button>
-              <Button type='button' variant='secondary' onClick={() => window.history.back()}>
+              <PiSpinnerLight
+                aria-hidden
+                hidden={navigation.state === 'idle'}
+                className='absolute w-6 h-6 -left-1.5 fill-background animate-spin top-2'
+              />
+              <Button
+                type='button'
+                variant='secondary'
+                className='disabled:cursor-not-allowed disabled:opacity-50'
+                disabled={navigation.state !== 'idle'}
+                onClick={() => window.history.back()}
+              >
                 Cancel
               </Button>
             </div>
           </div>
+          {/* Product Cover & Images */}
           <div className='w-2/5'>
             <h2 className='mb-4 font-bold'>Product Cover</h2>
             <div className='space-y-3'>
@@ -313,7 +385,7 @@ export default function AdminNewProductLayout() {
                           formErrors.cover && '!text-additional-red animate-shake'
                         }`}
                       >
-                        Upload cover please
+                        {navigation.state !== 'idle' ? <div>Loading...</div> : 'Please upload an image'}
                       </label>
                     </>
                   )}
@@ -340,7 +412,9 @@ export default function AdminNewProductLayout() {
                             <DialogTrigger className='w-full text-right cursor-pointer'>Edit</DialogTrigger>
                           </DropdownMenuItem>
                           <DropdownMenuItem>
-                            <label htmlFor='image-change'>Replace</label>
+                            <label htmlFor='image-change' className='w-full text-right cursor-pointer'>
+                              Replace
+                            </label>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -432,7 +506,7 @@ export default function AdminNewProductLayout() {
                   <div className='flex items-center justify-center w-full'>
                     <label
                       htmlFor='images'
-                      className='flex flex-col items-center justify-center w-full py-8 px-4 border-2 
+                      className='flex flex-col items-center justify-center w-full py-8 px-4 border-2 transition-colors duration-300
                         bg-[url("/static/assets/dashed-border.svg")] border-none shadow-none rounded-lg cursor-pointer dark:hover:bg-bray-800 
                       dark:bg-gray-700 hover:bg-secondary-50 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600'
                     >
@@ -444,7 +518,7 @@ export default function AdminNewProductLayout() {
                         <p className='font-semibold text-secondary-500 dark:text-secondary-500'>SVG, PNG, JPG</p>
                       </div>
                       <input name='images' className='hidden' {...getInputProps()} />
-                      {dropZoneErrors && (
+                      {dropZoneErrors.length > 0 && (
                         <ul className='w-full pl-4 mt-4 text-sm text-additional-red dark:text-additional-red'>
                           {dropZoneErrors.map(error => (
                             <li key={error}>{error}</li>
@@ -455,19 +529,19 @@ export default function AdminNewProductLayout() {
                   </div>
                 </div>
                 <div className='grid w-full grid-cols-3 gap-4 mt-4 grid-container'>
-                  {files.map(file => (
+                  {productImages.map((file, i) => (
                     <div
-                      key={file}
-                      className='relative p-2.5 flex items-center justify-center rounded-lg
-                       bg-secondary-100 [&>div.trash]:hover:opacity-100 aspect-square w-full h-auto'
+                      key={i}
+                      className='relative flex items-center justify-center rounded-lg
+                       bg-secondary-50 [&>div.trash]:hover:opacity-100 aspect-square w-auto h-auto'
                     >
                       <div
-                        className='trash absolute right-[5px] top-[3px] cursor-pointer opacity-0'
-                        onClick={() => setFiles(prev => prev.filter(f => f !== file))}
+                        className='trash absolute -right-3 -top-3  cursor-pointer opacity-0 bg-secondary-500 rounded-full p-1.5 transition-opacity'
+                        onClick={() => setProductImages(prev => prev.filter(f => f !== file))}
                       >
-                        <img className='z-10 w-6 h-6' src='/static/assets/icons/trash.svg' alt='' />
+                        <img className='z-10 w-6 h-6' src='/static/assets/icons/trash-white.svg' alt='' />
                       </div>
-                      <img className='max-w-24 max-h-24 rounded-sm bg-[#F6F4EF]' src={file} alt='' />
+                      <img className='rounded-sm bg-[#F6F4EF]' src={file} alt='' />
                     </div>
                   ))}
                 </div>
@@ -475,6 +549,7 @@ export default function AdminNewProductLayout() {
             </div>
           </div>
         </div>
+        {/* Leaving page dialog */}
         <AlertDialog open={blocker.state === 'blocked'}>
           <AlertDialogContent>
             <AlertDialogHeader>
