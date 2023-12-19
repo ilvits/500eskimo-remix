@@ -1,13 +1,13 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '~/components/ui/alert-dialog';
+// import {
+//   AlertDialog,
+//   AlertDialogAction,
+//   AlertDialogCancel,
+//   AlertDialogContent,
+//   AlertDialogDescription,
+//   AlertDialogFooter,
+//   AlertDialogHeader,
+//   AlertDialogTitle,
+// } from '~/components/ui/alert-dialog';
 import type { Coordinates, CropperRef, CropperState, DefaultSettings } from 'react-advanced-cropper';
 import { Cropper, getTransformedImageSize, retrieveSizeRestrictions } from 'react-advanced-cropper';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from '~/components/ui/dialog';
@@ -19,7 +19,7 @@ import {
 } from '~/components/ui/custom/dropdown-menu';
 import type { DropzoneOptions, FileRejection } from 'react-dropzone';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
-import { useBlocker, useLoaderData, useNavigation } from '@remix-run/react';
+import { useBlocker, useFetcher, useLoaderData, useNavigation } from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { AddProduct } from '~/common/productSchema';
@@ -33,9 +33,11 @@ import ProductVariants from './ProductVariants';
 import { ProductVariantsStatus } from '@prisma/client';
 import { Switch } from '~/components/ui/switch';
 import { TagsSelect } from '~/components/ui/custom/TagsSelect';
+import UploadedImagesGallery from '~/components/ui/custom/UploadedImagesGallery';
 import { ValidatedForm } from 'remix-validated-form';
 import type { loader } from '~/routes/admin.products.new';
 import { productSchema } from '~/common/productSchema';
+import slugify from '@sindresorhus/slugify';
 import { toBase64 } from '~/lib/utils';
 import { useDropzone } from 'react-dropzone-esm';
 import { withZod } from '@remix-validated-form/with-zod';
@@ -48,20 +50,35 @@ export type productVariantsImages = {
 const validator = withZod(productSchema);
 
 export default function AdminNewProductLayout() {
+  const navigation = useNavigation();
+  const fetcher = useFetcher();
+
+  const isImageUploading = fetcher.state === 'submitting' || fetcher.state === 'loading';
+  const isImageSorting = fetcher.state === 'submitting' && fetcher.formData?.get('_action') === 'sortImages';
+
   const { tags, options, images, sorts, category } = useLoaderData<typeof loader>();
   const cropperRef = useRef<CropperRef>(null);
-
-  const navigation = useNavigation();
 
   const [cover, setCover] = useState<string | null | undefined>(undefined);
   const [coverSrc, setCoverSrc] = useState<string | null | undefined>(null);
   const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
-  const [productImages, setProductImages] = useState<string[]>([]);
   const [productVariantsImages, setProductVariantsImages] = useState<productVariantsImages>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [dropZoneErrors, setDropZoneErrors] = useState<string[]>([]);
   const [productVariants, setProductVariants] = useState<AddProduct['productVariants']>([]);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [productImages, setProductImages] = useState<object[]>([]);
+  const submitingImages =
+    fetcher.formData &&
+    fetcher.formData.get('_action') === 'uploadImages' &&
+    JSON.parse(fetcher.formData?.get('productImages') as string)
+      .map((image: any) => ({
+        name: image.name + '.' + image.extention,
+        imageUrl: image.base64,
+      }))
+      .filter(
+        (image: any) => !productImages.map((prevImage: any) => prevImage.imageUrl.split('/').pop()).includes(image.name)
+      );
 
   const defaultValues: AddProduct = {
     sortId: 0,
@@ -88,6 +105,31 @@ export default function AdminNewProductLayout() {
     ],
   };
 
+  const handleReactSortableEnd = () => {
+    console.log('onEnd');
+    let newState: any[] = [];
+    setProductImages(prevState => {
+      newState = prevState.map((image: any, index: number) => ({ ...image, order: index }));
+      fetcher.submit(
+        {
+          _action: 'sortImages',
+          productImages: JSON.stringify(newState),
+        },
+        { method: 'post' }
+      );
+      return newState;
+    });
+  };
+
+  useEffect(() => {
+    console.log('productImages: ', productImages);
+  }, [productImages]);
+
+  useEffect(() => {
+    images.length && setProductImages(images.sort((a, b) => a.order - b.order));
+    console.log('images: ', images);
+  }, [images]);
+
   useEffect(() => {
     if (coverSrc) {
       const img = new Image();
@@ -97,14 +139,17 @@ export default function AdminNewProductLayout() {
       };
     }
   }, [coverSrc]);
+
+  useEffect(() => {
+    cover && setFormErrors((prevState: FormErrors) => ({ ...prevState, cover: false }));
+  }, [cover]);
+
   useEffect(() => {
     if (!coverSrc && cover) {
       setCoverSrc(cover);
     }
   }, [cover, coverSrc]);
-  useEffect(() => {
-    cover && setFormErrors((prevState: FormErrors) => ({ ...prevState, cover: false }));
-  }, [cover]);
+
   useEffect(() => {
     productVariants.length > 0 && setFormErrors((prevState: FormErrors) => ({ ...prevState, productVariants: false }));
     productVariants.every(variant => variant.optionValueId) &&
@@ -112,12 +157,10 @@ export default function AdminNewProductLayout() {
     productVariants.every(variant => variant.name) &&
       setFormErrors((prevState: FormErrors) => ({ ...prevState, optionName: false }));
   }, [productVariants]);
-  useEffect(() => {
-    console.log('productVariants: ', productVariants);
-  }, [productVariants]);
-  useEffect(() => {
-    console.log('productVariantsImages: ', productVariantsImages);
-  }, [productVariantsImages]);
+
+  // useEffect(() => {
+  //   console.log('productVariantsImages: ', productVariantsImages);
+  // }, [productVariantsImages]);
 
   const defaultSize = ({ imageSize, visibleArea }: CropperState) => {
     return {
@@ -175,7 +218,7 @@ export default function AdminNewProductLayout() {
       'image/jpeg': ['.jpg', '.jpeg'],
       'image/webp': ['.webp'],
     },
-    maxSize: 5_000_000,
+    maxSize: 1_000_000,
     maxFiles: 10,
     onDropRejected: filesRejected => {
       console.log('onDropRejected');
@@ -189,14 +232,29 @@ export default function AdminNewProductLayout() {
       setDropZoneErrors(Array.from(errors));
       console.log('dropZoneErrors: ', dropZoneErrors);
     },
-    onDrop: (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-      console.log('rejectedFiles: ', fileRejections);
+    onDrop: async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
       !fileRejections.length && setDropZoneErrors([]);
-      acceptedFiles.forEach((file: File) => {
-        toBase64(file).then(base64 => {
-          setProductImages(prev => (prev.includes(base64 as string) ? prev : [...prev, base64 as string]));
-        });
-      });
+      // console.log(acceptedFiles.map(file => file));
+      const base64Images = await Promise.all(
+        acceptedFiles
+          // .filter(file => productImages.includes(file.name))
+          .map(async (image: File) => {
+            return {
+              name: slugify(image.name.split('.').slice(0, -1).join('.')),
+              extention: image.name.split('.').pop(),
+              type: image.type,
+              base64: (await toBase64(image)) as string,
+            };
+          })
+      );
+      fetcher.submit(
+        {
+          _action: 'uploadImages',
+          productImages: JSON.stringify(base64Images),
+          lastIndex: productImages.length,
+        },
+        { method: 'post' }
+      );
     },
   } as DropzoneOptions);
 
@@ -235,24 +293,27 @@ export default function AdminNewProductLayout() {
       ...prev.slice(index + 1, prev.length),
     ]);
   };
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      (productVariants.length !== 0 || productImages || cover) && currentLocation.pathname !== nextLocation.pathname
-  );
+  // const blocker = useBlocker(
+  //   ({ currentLocation, nextLocation }) =>
+  //     (productVariants.length !== 0 || productImages || cover) && currentLocation.pathname !== nextLocation.pathname
+  // );
 
   return (
-    <div>
-      <h1 className='mb-8 text-2xl font-bold'>Add new Product ({category.name})</h1>
+    <section>
+      {/* <pre>{JSON.stringify(productImages, null, 2)}</pre> */}
+      {/* {serverError && <pre>{JSON.stringify(serverError, null, 2)}</pre>} */}
+      <h1 className='mb-8 space-x-4 text-2xl font-bold'>
+        <span>Add new Product</span>
+        <span className='px-2 border rounded-lg text-secondary-500 border-secondary-500/50 '>{category.name}</span>
+      </h1>
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
         <input type='hidden' name='categorySlug' value={category.slug} />
         <input type='hidden' name='productStatus' value='DRAFT' />
         <input type='hidden' name='rating' value='0' />
         <input type='hidden' name='numReviews' value='0' />
-        {/* //TODO: Rename cover_public_id to coverPublicId in db */}
-        {/* <input type='hidden' name='coverPublicId' value={product?.cover_public_id} /> */}
         {cover && <input type='hidden' name='cover' value={cover} />}
-        {productImages.length > 0 &&
-          productImages.map((file, i) => <input key={i} type='hidden' name='productImages' value={file} />)}
+        {/* {productImages.length > 0 &&
+          productImages.map((file, i) => <input key={i} type='hidden' name='productImages' value={file} />)} */}
         {productVariantsImages.length > 0 && (
           <input type='hidden' name='productVariantsImages' value={JSON.stringify(productVariantsImages)} />
         )}
@@ -500,7 +561,7 @@ export default function AdminNewProductLayout() {
                   </DialogContent>
                 </Dialog>
               </div>
-              <section className='w-full'>
+              <section className='relative w-full'>
                 <h2 className='mb-4 font-bold'>Gallery</h2>
                 <div id='dropzone' className='dropzone' {...getRootProps()}>
                   <div className='flex items-center justify-center w-full'>
@@ -528,29 +589,20 @@ export default function AdminNewProductLayout() {
                     </label>
                   </div>
                 </div>
-                <div className='grid w-full grid-cols-3 gap-4 mt-4 grid-container'>
-                  {productImages.map((file, i) => (
-                    <div
-                      key={i}
-                      className='relative flex items-center justify-center rounded-lg
-                       bg-secondary-50 [&>div.trash]:hover:opacity-100 aspect-square w-auto h-auto'
-                    >
-                      <div
-                        className='trash absolute -right-3 -top-3  cursor-pointer opacity-0 bg-secondary-500 rounded-full p-1.5 transition-opacity'
-                        onClick={() => setProductImages(prev => prev.filter(f => f !== file))}
-                      >
-                        <img className='z-10 w-6 h-6' src='/static/assets/icons/trash-white.svg' alt='' />
-                      </div>
-                      <img className='rounded-sm bg-[#F6F4EF]' src={file} alt='' />
-                    </div>
-                  ))}
-                </div>
+                <UploadedImagesGallery
+                  productImages={productImages}
+                  setProductImages={setProductImages}
+                  fetcherImages={submitingImages || []}
+                  isSubmiting={isImageUploading}
+                  isSorting={isImageSorting}
+                  handleReactSortableEnd={handleReactSortableEnd}
+                />
               </section>
             </div>
           </div>
         </div>
         {/* Leaving page dialog */}
-        <AlertDialog open={blocker.state === 'blocked'}>
+        {/* <AlertDialog open={blocker.state === 'blocked'}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -565,8 +617,8 @@ export default function AdminNewProductLayout() {
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+        </AlertDialog> */}
       </ValidatedForm>
-    </div>
+    </section>
   );
 }

@@ -332,8 +332,7 @@ export default function AdminEditProductLayout() {
         <input type='hidden' name='productStatus' value={product?.productStatus} />
         <input type='hidden' name='rating' value='0' />
         <input type='hidden' name='numReviews' value='0' />
-        {/* //TODO: Rename cover_public_id to coverPublicId in db */}
-        <input type='hidden' name='coverPublicId' value={product?.cover_public_id} />
+        <input type='hidden' name='coverPublicId' value={product?.coverPublicId} />
         {cover && <input type='hidden' name='cover' value={cover} />}
         {productImages.length > 0 &&
           productImages.map((file, i) => <input key={i} type='hidden' name='productImages' value={file} />)}

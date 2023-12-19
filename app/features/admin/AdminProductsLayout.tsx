@@ -34,7 +34,6 @@ export default function AdminProductsLayout() {
 
   const [searchParams] = useSearchParams();
   const navigation = useNavigation();
-  const navigate = useNavigate();
   const submit = useSubmit();
 
   const productsOnPageOptions = ['10', '25', '50', '100'];
@@ -65,9 +64,9 @@ export default function AdminProductsLayout() {
                 <DropdownMenuItem
                   className='justify-end cursor-pointer'
                   key={category.slug}
-                  onClick={() => {
-                    navigate(`/admin/products/new?category=${category.slug}`);
-                  }}
+                  onClick={() =>
+                    submit({ _action: 'newProduct', category: category.slug }, { replace: true, method: 'post' })
+                  }
                 >
                   {category.name}
                 </DropdownMenuItem>

@@ -1,10 +1,15 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
-import { deleteProduct, getProducts, updateProductStatus } from '~/services/products.server';
+import {
+  deleteProduct,
+  deleteProductImagesByStatus,
+  getProducts,
+  updateProductStatus,
+} from '~/services/products.server';
+import { json, redirect } from '@remix-run/node';
 
 import AdminProductsLayout from '~/features/admin/AdminProductsLayout';
 import type { ProductStatus } from '@prisma/client';
 import { authenticator } from '~/auth/authenticator.server';
-import { json } from '@remix-run/node';
 
 export type FormErrors = {
   [key: string]: boolean;
@@ -50,6 +55,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const _action = formData.get('_action');
   switch (_action) {
+    case 'newProduct': {
+      const category = formData.get('category');
+      const deletedImages = await deleteProductImagesByStatus({ status: 'TEMPORARY' });
+      console.log('deletedImages: ', deletedImages);
+      return redirect(`/admin/products/new?category=${category}`);
+    }
     case 'updateStatus': {
       const id = Number(formData.get('id'));
       const status = formData.get('status');

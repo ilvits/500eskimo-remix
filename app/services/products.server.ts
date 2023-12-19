@@ -1,4 +1,5 @@
-import type { ProductStatus, Products } from '@prisma/client';
+import type { ImageStatus, ProductStatus, Products } from '@prisma/client';
+import { cloudinaryMoveImages, cloudinaryRemoveTag } from './cloudinary.server';
 
 import cloudinary from 'cloudinary';
 import invariant from 'tiny-invariant';
@@ -177,6 +178,7 @@ export const getProducts = async ({
 
 export const createProduct = async ({ data, categorySlug, productImages, productVariantsImages, tagIds }: any) => {
   const category = await getCategoryBySlug(categorySlug);
+  const images = await getTemporaryImages();
   data.categoryId = category?.id;
   data.slug = slugify(data.title);
   data.tagIds = tagIds;
@@ -194,31 +196,9 @@ export const createProduct = async ({ data, categorySlug, productImages, product
     )) as UploadedImage;
 
     data.cover = uploadedCover.secure_url || uploadedCover.url;
-    data.cover_public_id = uploadedCover.public_id;
+    data.coverPublicId = uploadedCover.public_id;
   }
 
-  console.log('productImages: ', productImages.length);
-  const uploadedImages = await Promise.all(
-    productImages
-      .filter((image: any) => image !== '')
-      .map(async (image: any) => {
-        const uploadedImage = (await cloudinary.v2.uploader.upload(
-          image,
-          { folder: `products/${categorySlug}/${data.slug}` },
-          function (error, result) {
-            // console.log('uploadedImage: ', result);
-            console.log('image uploaded');
-            if (error) {
-              console.log('error: ', error);
-            }
-          }
-        )) as UploadedImage;
-        return uploadedImage;
-      })
-  );
-  console.log('uploadedImages: ', uploadedImages);
-
-  // console.log('uploadedVariantsImages: ', productVariantsImages);
   const uploadedVariantsImages = await Promise.all(
     productVariantsImages.map(async (imageSet: any) => {
       return await Promise.all(
@@ -247,19 +227,18 @@ export const createProduct = async ({ data, categorySlug, productImages, product
   const product = await prisma.products.create({
     data: {
       ...data,
-      productImages: {
-        create: uploadedImages.map(image => {
-          return {
-            imageUrl: image.secure_url || image.url,
-            publicId: image.public_id,
-          };
-        }),
-      },
       productVariants: {
         create: data.productVariants,
       },
     },
   });
+  console.log('product: ', product);
+  await cloudinaryRemoveTag(
+    images.map((image: any) => image.publicId),
+    'TEMPORARY'
+  );
+  await cloudinaryMoveImages({ productId: product.id, images, to: `products/${categorySlug}/${data.slug}` });
+
   invariant(product, 'Unable to create product');
   return product;
 };
@@ -590,15 +569,15 @@ export const deleteProduct = async (id: number) => {
   invariant(deletedProduct, 'Unable to delete ');
 
   deletedProduct &&
-    product?.cover_public_id &&
+    product?.coverPublicId &&
     (await cloudinary.api.delete_resources_by_prefix(
-      product?.cover_public_id.slice(0, product?.cover_public_id.lastIndexOf('/')),
+      product?.coverPublicId.slice(0, product?.coverPublicId.lastIndexOf('/')),
       (result: any) => {
         console.log(result);
       }
     )) &&
     (await cloudinary.v2.api.delete_folder(
-      product?.cover_public_id.slice(0, product?.cover_public_id.lastIndexOf('/')),
+      product?.coverPublicId.slice(0, product?.coverPublicId.lastIndexOf('/')),
       (result: any) => {
         console.log(result);
       }
@@ -646,6 +625,89 @@ export const getImagesByProductId = async (productId: number) => {
   return productImages;
 };
 
+export const getTemporaryImages = async () => {
+  const images = await prisma.productImages.findMany({
+    where: {
+      status: 'TEMPORARY',
+      productId: null,
+      productVariantId: null,
+    },
+    select: {
+      id: true,
+      order: true,
+      productId: true,
+      productVariantId: true,
+      imageUrl: true,
+      publicId: true,
+    },
+    orderBy: {
+      order: 'asc',
+    },
+  });
+  invariant(images, 'Unable to get temporary images');
+  // console.log('images: ', images);
+
+  return images;
+};
+
+export const createTemporaryImages = async ({ images, lastIndex }: { images: any; lastIndex: number }) => {
+  const result = await prisma.productImages.createMany({
+    data: images.map((image: any, index: number) => ({
+      order: lastIndex + index,
+      imageUrl: image.secure_url || image.url,
+      publicId: image.public_id,
+      assetId: image.asset_id,
+      folder: image.folder,
+      status: 'TEMPORARY',
+    })),
+    skipDuplicates: true,
+  });
+  // console.log('result: ', result);
+  return result;
+};
+
+export const updateTemporaryImagesSorting = async ({ images }: { images: any }) => {
+  await Promise.all(
+    images.map(async (image: any) => {
+      const productImage = await prisma.productImages.update({
+        where: {
+          id: image.id,
+        },
+        data: {
+          order: image.order,
+          productId: image.productId || null,
+          productVariantId: image.productVariantId || null,
+        },
+      });
+      return productImage;
+    })
+  )
+    .then(result => {
+      return result;
+    })
+    .catch(error => {
+      console.log('error: ', error);
+      return error;
+    });
+};
+
+export const deleteProductImagesByStatus = async ({ status }: { status: keyof typeof ImageStatus }) => {
+  const deletedImages = await cloudinary.v2.api.delete_resources_by_tag(status, (result: any) => {
+    console.log(result);
+  });
+
+  invariant(deletedImages, 'Unable to delete product images');
+
+  const result = await prisma.productImages.deleteMany({
+    where: {
+      status,
+    },
+  });
+
+  console.log('result: ', result);
+  return result;
+};
+
 // console.log('Images: ', await getImagesByProductId(1));
 
 // cloudinary.api.delete_resources_by_prefix('products', (result: any) => {
@@ -655,3 +717,4 @@ export const getImagesByProductId = async (productId: number) => {
 // cloudinary.v2.api.delete_folder('products', (result: any) => {
 //   console.log(result);
 // });
+// deleteProductImagesByStatus('TEMPORARY');

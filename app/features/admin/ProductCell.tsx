@@ -42,7 +42,7 @@ export const ProductCell: FunctionComponent<{ product: ProductsExtended }> = ({ 
       <TableCell>
         <div className='flex items-center space-x-2'>
           <img
-            className='w-16 h-16 rounded-md shrink-0'
+            className='object-cover w-16 h-16 rounded-md shrink-0'
             width={64}
             height={64}
             src={product.cover || '/static/assets/no-image.jpg'}
