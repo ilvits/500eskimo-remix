@@ -42,7 +42,7 @@ export default function UploadedImagesGallery({
                 <img className='z-10 w-5 h-5' src='/static/assets/icons/trash-white.svg' alt='' />
               </div>
               <img className='rounded-sm bg-[#F6F4EF]' src={image.imageUrl} alt='' />
-              <p className='py-1 text-sm font-semibold text-secondary-500'>
+              <p className='w-full p-1 text-xs font-semibold truncate text-secondary-500'>
                 {image.imageUrl.split('/')[image.imageUrl.split('/').length - 1]}
               </p>
             </div>
