@@ -566,7 +566,11 @@ export const getProduct = async (id: number) => {
 };
 
 export const getTotalProducts = async () => {
-  const result = await prisma.products.count();
+  const result = await prisma.products.count({
+    where: {
+      temporary: false,
+    },
+  });
   return result;
 };
 
