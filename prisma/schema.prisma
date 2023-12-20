@@ -81,7 +81,7 @@ model Tags {
 model Products {
   id              Int               @id @unique @default(autoincrement())
   categoryId      Int
-  sortId          Int
+  sortId          Int?
   tagIds          String[]
   title           String
   slug            String            @unique
@@ -99,12 +99,13 @@ model Products {
   freeDelivery    Boolean           @default(false)
   productStatus   ProductStatus     @default(DRAFT)
   category        Categories        @relation(fields: [categoryId], references: [id])
-  sort            Sorts             @relation(fields: [sortId], references: [id])
+  sort            Sorts?            @relation(fields: [sortId], references: [id])
   productVariants ProductVariants[]
   productImages   ProductImages[]
   orderItems      OrderItems[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @default(now())
+  temporary       Boolean           @default(false)
 }
 
 model ProductVariants {
@@ -166,7 +167,7 @@ model ProductImages {
   status           ImageStatus      @default(TEMPORARY)
   imageUrl         String
   publicId         String           @unique
-  assetId          String?
+  assetId          String           @unique
   folder           String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @default(now())

@@ -2,13 +2,10 @@ import type { ActionFunctionArgs, LinksFunction, LoaderFunctionArgs } from '@rem
 import {
   createProduct,
   createTemporaryImages,
-  deleteProductImagesByStatus,
-  getAllSorts,
-  getAllTags,
   getCategoryBySlug,
-  getOptions,
+  getTempProduct,
   getTemporaryImages,
-  updateTemporaryImagesSorting,
+  updateTemporaryImages,
 } from '~/services/products.server';
 import { json, redirect } from '@remix-run/node';
 
@@ -34,13 +31,11 @@ export const links: LinksFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const tags = await getAllTags();
-  const options = await getOptions();
-  const sorts = await getAllSorts();
   const categorySlug = new URL(request.url).searchParams.get('category');
   const category = categorySlug && (await getCategoryBySlug(categorySlug));
+  const { product, tags, sorts, options } = await getTempProduct();
   const images = await getTemporaryImages();
-  return json({ tags, options, sorts, images, category });
+  return json({ product, tags, sorts, options, images, category });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -57,7 +52,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const productImages = JSON.parse(formData.get('productImages') as string);
     console.log('productImages: ', productImages);
 
-    const updatedProductImages = await updateTemporaryImagesSorting({ images: productImages });
+    const updatedProductImages = await updateTemporaryImages({ images: productImages });
     console.log('updatedProductImages: ', updatedProductImages);
 
     return json({ updatedProductImages });

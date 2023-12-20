@@ -219,7 +219,7 @@ export default function AdminDashboard() {
               <CardContent className='text-[#372400] py-4 px-0'>
                 <div className='flex flex-row items-center space-x-4'>
                   <img
-                    className='w-12 h-12 rounded-sm shrink-0'
+                    className='object-cover w-12 h-12 rounded-sm shrink-0'
                     src={productVariant.product.cover || '/static/assets/no-image.jpg'}
                     alt=''
                   />

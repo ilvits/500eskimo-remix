@@ -24,46 +24,22 @@ export const uploadImagesToCloudinary = async (data: object[]) => {
   return uploadedImages;
 };
 
-export const cloudinaryMoveImages = async ({
-  productId,
-  images,
-  to,
-}: {
-  images: any;
-  to: string;
-  productId: number;
-}) => {
-  // console.log('image public id: ', images[0].publicId);
-  // console.log('to: ', to + images[0].publicId.slice(images[0].publicId.lastIndexOf('/')));
-  // console.log('productId: ', productId);
-
-  await Promise.all(
+export const cloudinaryMoveImages = async ({ images, to }: { images: any; to: string }) => {
+  return await Promise.all(
     images.map(async (image: any) => {
-      const updatedImages = await cloudinary.v2.uploader.rename(
+      return await cloudinary.v2.uploader.rename(
         image.publicId,
-        to + image.publicId.slice(image.publicId.lastIndexOf('/')),
-        (result: any) => {
-          console.log(result);
-        }
+        to + image.publicId.slice(image.publicId.lastIndexOf('/'))
       );
-      return updatedImages;
     })
-  )
-    .then(result => {
-      return result;
-    })
-    .catch(error => {
-      console.log('error: ', error);
-      return error;
-    });
+  );
 };
 
-export const cloudinaryRemoveTag = async (publicIds: string[], tag: string) => {
-  console.log('publicId: ', publicIds);
-  console.log('tag: ', tag);
+export const cloudinaryRemoveTag = async ({ publicIds, tag }: { publicIds: string[]; tag: string }) => {
+  // console.log('publicId: ', publicIds);
   await cloudinary.v2.uploader.remove_tag(tag, [...publicIds]).then(result => {
-    console.log(result);
+    // console.log(result);
+    console.log('tags updated');
+    return result;
   });
-  console.log('tags updated');
-  return true;
 };

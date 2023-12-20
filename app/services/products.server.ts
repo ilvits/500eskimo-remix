@@ -70,6 +70,7 @@ export const getProducts = async ({
 }) => {
   const countRequest = {
     where: {
+      temporary: false,
       productStatus: (productStatus || 'PUBLISHED') as any,
       categoryId: categoryId ? Number(categoryId) : undefined,
       title: {
@@ -106,6 +107,7 @@ export const getProducts = async ({
       [orderBy || 'id']: order || 'asc',
     },
     where: {
+      temporary: false,
       productStatus: (productStatus || 'PUBLISHED') as any,
       categoryId: categoryId ? Number(categoryId) : undefined,
       title: {
@@ -122,6 +124,7 @@ export const getProducts = async ({
       productStatus: 'asc',
     },
     where: {
+      temporary: false,
       categoryId: categoryId ? Number(categoryId) : undefined,
       title: {
         contains: q || undefined,
@@ -174,6 +177,70 @@ export const getProducts = async ({
     categories: result[3],
     tags: result[4],
   };
+};
+
+export const createTempProduct = async ({ categorySlug }: { categorySlug: string }) => {
+  const tempProduct = await prisma.products.findFirst({
+    where: {
+      temporary: true,
+    },
+  });
+  tempProduct && (await prisma.products.delete({ where: { id: tempProduct.id } }));
+
+  const result = await prisma.products.create({
+    data: {
+      title: 'Untitled Product',
+      slug: 'untitled-product',
+      category: { connect: { slug: categorySlug } },
+      productStatus: 'DRAFT',
+      temporary: true,
+    },
+  });
+  invariant(result, 'Unable to create empty product');
+  return result;
+};
+
+export const getTempProduct = async () => {
+  const result = await prisma.$transaction([
+    prisma.products.findFirst({
+      where: {
+        temporary: true,
+      },
+      include: {
+        category: {
+          select: {
+            name: true,
+          },
+        },
+        productVariants: {
+          include: {
+            optionValue: true,
+          },
+        },
+      },
+    }),
+    prisma.tags.findMany(),
+    prisma.sorts.findMany(),
+    prisma.options.findMany({
+      select: {
+        id: true,
+        name: true,
+        optionValues: {
+          select: {
+            id: true,
+            value: true,
+            unit: true,
+          },
+          orderBy: {
+            value: 'asc',
+          },
+        },
+      },
+    }),
+  ]);
+
+  invariant(result, 'Unable to get empty product');
+  return { product: result[0], tags: result[1], sorts: result[2], options: result[3] };
 };
 
 export const createProduct = async ({ data, categorySlug, productImages, productVariantsImages, tagIds }: any) => {
@@ -233,12 +300,16 @@ export const createProduct = async ({ data, categorySlug, productImages, product
     },
   });
   console.log('product: ', product);
-  await cloudinaryRemoveTag(
-    images.map((image: any) => image.publicId),
-    'TEMPORARY'
-  );
-  await cloudinaryMoveImages({ productId: product.id, images, to: `products/${categorySlug}/${data.slug}` });
 
+  await cloudinaryRemoveTag({
+    publicIds: images.map((image: any) => image.publicId),
+    tag: 'TEMPORARY',
+  });
+  const updatedImages = await cloudinaryMoveImages({ images, to: `products/${categorySlug}/${data.slug}` });
+  console.log('images : ', images);
+  console.log('updatedImages: ', updatedImages);
+
+  await updateTemporaryImages({ images: updatedImages, productId: product.id, status: 'ACTIVE' });
   invariant(product, 'Unable to create product');
   return product;
 };
@@ -639,6 +710,7 @@ export const getTemporaryImages = async () => {
       productVariantId: true,
       imageUrl: true,
       publicId: true,
+      assetId: true,
     },
     orderBy: {
       order: 'asc',
@@ -666,16 +738,28 @@ export const createTemporaryImages = async ({ images, lastIndex }: { images: any
   return result;
 };
 
-export const updateTemporaryImagesSorting = async ({ images }: { images: any }) => {
+export const updateTemporaryImages = async ({
+  images,
+  productId = null,
+  status = 'TEMPORARY',
+}: {
+  images: any;
+  productId?: number | null;
+  status?: keyof typeof ImageStatus;
+}) => {
   await Promise.all(
     images.map(async (image: any) => {
       const productImage = await prisma.productImages.update({
         where: {
-          id: image.id,
+          assetId: image.asset_id,
         },
         data: {
-          order: image.order,
-          productId: image.productId || null,
+          [image.order && 'order']: image.order,
+          imageUrl: image.secure_url || image.url,
+          publicId: image.public_id,
+          status: status || 'TEMPORARY',
+          folder: image.folder,
+          productId: productId || null,
           productVariantId: image.productVariantId || null,
         },
       });
@@ -718,3 +802,4 @@ export const deleteProductImagesByStatus = async ({ status }: { status: keyof ty
 //   console.log(result);
 // });
 // deleteProductImagesByStatus('TEMPORARY');
+// createEmptyProduct();

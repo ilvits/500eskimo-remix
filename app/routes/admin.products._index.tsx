@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import {
+  createTempProduct,
   deleteProduct,
   deleteProductImagesByStatus,
   getProducts,
@@ -56,10 +57,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const _action = formData.get('_action');
   switch (_action) {
     case 'newProduct': {
-      const category = formData.get('category');
-      const deletedImages = await deleteProductImagesByStatus({ status: 'TEMPORARY' });
-      console.log('deletedImages: ', deletedImages);
-      return redirect(`/admin/products/new?category=${category}`);
+      const categorySlug = formData.get('category');
+      await deleteProductImagesByStatus({ status: 'TEMPORARY' });
+      await createTempProduct({ categorySlug: categorySlug as string });
+      return redirect(`/admin/products/new?category=${categorySlug}`);
     }
     case 'updateStatus': {
       const id = Number(formData.get('id'));

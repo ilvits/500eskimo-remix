@@ -19,7 +19,7 @@ import {
 } from '~/components/ui/custom/dropdown-menu';
 import type { DropzoneOptions, FileRejection } from 'react-dropzone';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
-import { useBlocker, useFetcher, useLoaderData, useNavigation } from '@remix-run/react';
+import { useBlocker, useFetcher, useLoaderData, useNavigate, useNavigation } from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { AddProduct } from '~/common/productSchema';
@@ -50,24 +50,26 @@ export type productVariantsImages = {
 const validator = withZod(productSchema);
 
 export default function AdminNewProductLayout() {
+  const navigate = useNavigate();
   const navigation = useNavigation();
   const fetcher = useFetcher();
 
   const isImageUploading = fetcher.state === 'submitting' || fetcher.state === 'loading';
   const isImageSorting = fetcher.state === 'submitting' && fetcher.formData?.get('_action') === 'sortImages';
 
-  const { tags, options, images, sorts, category } = useLoaderData<typeof loader>();
+  const { product, tags, options, images, sorts, category } = useLoaderData<typeof loader>();
+
   const cropperRef = useRef<CropperRef>(null);
 
   const [cover, setCover] = useState<string | null | undefined>(undefined);
   const [coverSrc, setCoverSrc] = useState<string | null | undefined>(null);
   const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
-  const [productVariantsImages, setProductVariantsImages] = useState<productVariantsImages>([]);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [dropZoneErrors, setDropZoneErrors] = useState<string[]>([]);
   const [productVariants, setProductVariants] = useState<AddProduct['productVariants']>([]);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [productImages, setProductImages] = useState<object[]>([]);
+  const [productVariantsImages, setProductVariantsImages] = useState<productVariantsImages>([]);
   const submitingImages =
     fetcher.formData &&
     fetcher.formData.get('_action') === 'uploadImages' &&
@@ -121,9 +123,9 @@ export default function AdminNewProductLayout() {
     });
   };
 
-  useEffect(() => {
-    console.log('productImages: ', productImages);
-  }, [productImages]);
+  // useEffect(() => {
+  //   console.log('productImages: ', productImages);
+  // }, [productImages]);
 
   useEffect(() => {
     images.length && setProductImages(images.sort((a, b) => a.order - b.order));
@@ -151,16 +153,14 @@ export default function AdminNewProductLayout() {
   }, [cover, coverSrc]);
 
   useEffect(() => {
+    console.log('productVariants: ', productVariants);
+
     productVariants.length > 0 && setFormErrors((prevState: FormErrors) => ({ ...prevState, productVariants: false }));
     productVariants.every(variant => variant.optionValueId) &&
       setFormErrors((prevState: FormErrors) => ({ ...prevState, optionValueId: false }));
     productVariants.every(variant => variant.name) &&
       setFormErrors((prevState: FormErrors) => ({ ...prevState, optionName: false }));
   }, [productVariants]);
-
-  // useEffect(() => {
-  //   console.log('productVariantsImages: ', productVariantsImages);
-  // }, [productVariantsImages]);
 
   const defaultSize = ({ imageSize, visibleArea }: CropperState) => {
     return {
@@ -304,10 +304,11 @@ export default function AdminNewProductLayout() {
       {/* {serverError && <pre>{JSON.stringify(serverError, null, 2)}</pre>} */}
       <h1 className='mb-8 space-x-4 text-2xl font-bold'>
         <span>Add new Product</span>
-        <span className='px-2 border rounded-lg text-secondary-500 border-secondary-500/50 '>{category.name}</span>
+        <span className='px-2 border rounded-lg text-secondary-500 border-secondary-500/50 '>{category?.name}</span>
       </h1>
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
-        <input type='hidden' name='categorySlug' value={category.slug} />
+        {product && <input type='hidden' name='id' value={product.id} />}
+        {category && <input type='hidden' name='categorySlug' value={category.slug} />}
         <input type='hidden' name='productStatus' value='DRAFT' />
         <input type='hidden' name='rating' value='0' />
         <input type='hidden' name='numReviews' value='0' />
@@ -348,48 +349,52 @@ export default function AdminNewProductLayout() {
                   +
                 </button>
               </div>
-              <Tabs defaultValue='PUBLISHED'>
-                <TabsList>
+              {productVariants.length > 0 && (
+                <Tabs defaultValue='PUBLISHED'>
+                  <TabsList>
+                    {Object.keys(ProductVariantsStatus).map((status, i) => (
+                      <TabsTrigger
+                        key={i}
+                        value={status}
+                        className='px-6 border rounded-full h-9 border-secondary-200 text-primary-brown bg-background data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100 capitalize'
+                      >
+                        {status.toLowerCase()}
+                        {productVariants.filter(productVariant => productVariant.status === status).length > 0 &&
+                          ' (' +
+                            productVariants.filter(productVariant => productVariant.status === status).length +
+                            ')'}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
                   {Object.keys(ProductVariantsStatus).map((status, i) => (
-                    <TabsTrigger
-                      key={i}
-                      value={status}
-                      className='px-6 border rounded-full h-9 border-secondary-200 text-primary-brown bg-background data-[state=active]:border-secondary-100 data-[state=active]:bg-secondary-100 capitalize'
-                    >
-                      {status.toLowerCase()}
-                      {productVariants.filter(productVariant => productVariant.status === status).length > 0 &&
-                        ' (' + productVariants.filter(productVariant => productVariant.status === status).length + ')'}
-                    </TabsTrigger>
+                    <TabsContent key={i} value={status}>
+                      <ProductVariants
+                        options={options}
+                        formErrors={formErrors}
+                        productVariantsImages={productVariantsImages}
+                        setProductVariantsImages={setProductVariantsImages}
+                        productVariants={
+                          productVariants
+                            .filter(productVariant => productVariant.status === status)
+                            .map(variant => {
+                              return {
+                                name: variant.name,
+                                SKU: variant.SKU,
+                                price: variant.price,
+                                quantity: variant.quantity,
+                                optionValueId: variant.optionValueId,
+                              };
+                            }) as any
+                        }
+                        images={images}
+                        setProductVariants={setProductVariants}
+                        duplicateProductVariant={duplicateProductVariant}
+                        removeProductVariant={removeProductVariant}
+                      />
+                    </TabsContent>
                   ))}
-                </TabsList>
-                {Object.keys(ProductVariantsStatus).map((status, i) => (
-                  <TabsContent key={i} value={status}>
-                    <ProductVariants
-                      options={options}
-                      formErrors={formErrors}
-                      productVariantsImages={productVariantsImages}
-                      setProductVariantsImages={setProductVariantsImages}
-                      productVariants={
-                        productVariants
-                          .filter(productVariant => productVariant.status === status)
-                          .map(variant => {
-                            return {
-                              name: variant.name,
-                              SKU: variant.SKU,
-                              price: variant.price,
-                              quantity: variant.quantity,
-                              optionValueId: variant.optionValueId,
-                            };
-                          }) as any
-                      }
-                      images={images}
-                      setProductVariants={setProductVariants}
-                      duplicateProductVariant={duplicateProductVariant}
-                      removeProductVariant={removeProductVariant}
-                    />
-                  </TabsContent>
-                ))}
-              </Tabs>
+                </Tabs>
+              )}
             </section>
             {/* Free Delivery */}
             <label htmlFor='freeDelivery' className='flex items-center justify-between'>
@@ -424,7 +429,7 @@ export default function AdminNewProductLayout() {
                 variant='secondary'
                 className='disabled:cursor-not-allowed disabled:opacity-50'
                 disabled={navigation.state !== 'idle'}
-                onClick={() => window.history.back()}
+                onClick={() => navigate('/admin/products')}
               >
                 Cancel
               </Button>
