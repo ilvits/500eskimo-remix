@@ -8,11 +8,14 @@ export const categorySchema = z.object({
 export type AddCategory = z.infer<typeof categorySchema>;
 
 export const productSchema = z.object({
+  id: z.coerce.number(),
+  categorySlug: z.string(),
   sortId: z.coerce.number().min(1, 'Please select a sort'),
   title: z.string({ required_error: 'Title is required' }).min(3, 'Must contain at least 3 chars'),
   description: z.string().optional(),
   ingredients: z.string().optional(),
   cover: z.string(),
+  coverPublicId: z.string().optional(),
   conditions: z.string({ required_error: 'Conditions is required' }).min(10, 'Must contain at least 10 chars'),
   callories: z.coerce.number().default(0).optional(),
   protein: z.coerce.number().default(0).optional(),

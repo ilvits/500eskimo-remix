@@ -1,10 +1,13 @@
 import type { ActionFunctionArgs, LinksFunction, LoaderFunctionArgs } from '@remix-run/node';
 import {
-  createProduct,
+  checkTitleExists,
   createTemporaryImages,
   getCategoryBySlug,
+  getImagesByProductId,
   getTempProduct,
   getTemporaryImages,
+  getTemporaryImagesByProductId,
+  updateProduct,
   updateTemporaryImages,
 } from '~/services/products.server';
 import { json, redirect } from '@remix-run/node';
@@ -31,53 +34,52 @@ export const links: LinksFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const categorySlug = new URL(request.url).searchParams.get('category');
+  const { searchParams } = new URL(request.url);
+  // const action = searchParams.get('_action');
+  // console.log('action: ', action);
+  // const titleExist =
+  //   action === 'checkTitle' && (await checkTitleExists({ title: searchParams.get('title') as string }));
+  const categorySlug = searchParams.get('category');
   const category = categorySlug && (await getCategoryBySlug(categorySlug));
   const { product, tags, sorts, options } = await getTempProduct();
-  const images = await getTemporaryImages();
+  // console.log('product: ', product);
+  const images = product && (await getTemporaryImagesByProductId({ productId: product.id }));
+  // console.log('images: ', images);
+  // console.log('titleExist: ', titleExist);
+
   return json({ product, tags, sorts, options, images, category });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
+  const productId = Number(formData.get('productId') as string);
 
-  if (formData.get('_action') === 'uploadImages') {
-    const productImages = JSON.parse(formData.get('productImages') as string);
-    const lastIndex = parseInt(formData.get('lastIndex') as string);
-    const uploadedImages = await uploadImagesToCloudinary(productImages);
-    const updatedProductImages = await createTemporaryImages({ images: uploadedImages, lastIndex });
-    // console.log('updatedProductImages: ', updatedProductImages);
-    return json({ updatedProductImages });
-  } else if (formData.get('_action') === 'sortImages') {
-    const productImages = JSON.parse(formData.get('productImages') as string);
-    console.log('productImages: ', productImages);
-
-    const updatedProductImages = await updateTemporaryImages({ images: productImages });
-    console.log('updatedProductImages: ', updatedProductImages);
-
-    return json({ updatedProductImages });
-  } else {
-    const fieldValues = (await validator.validate(formData)) || { data: {} };
-    if (fieldValues.error) return validationError(fieldValues.error);
-
-    const categorySlug = formData.get('categorySlug');
-    console.log('categorySlug', categorySlug);
-
-    const tagIds = formData.getAll('tagIds');
-    const productImages = formData.getAll('productImages');
-    const productVariantsImages = formData.getAll('productVariantsImages').map(image => JSON.parse(image as string))[0];
-    console.log('productVariantsImages: ', productVariantsImages);
-
-    const createdProduct = await createProduct({
-      data: fieldValues.data,
-      productImages,
-      productVariantsImages,
-      categorySlug,
-      tagIds,
-    });
-    if (!createdProduct) throw new Error('Something went wrong');
-
-    return redirect('/admin/products?status=DRAFT');
+  switch (formData.get('_action')) {
+    case 'uploadImages': {
+      const productImages = JSON.parse(formData.get('productImages') as string);
+      const lastIndex = parseInt(formData.get('lastIndex') as string);
+      const uploadedImages = await uploadImagesToCloudinary(productImages);
+      const uploadedProductImages = await createTemporaryImages({ images: uploadedImages, lastIndex, productId });
+      return json({ uploadedProductImages });
+    }
+    case 'sortImages': {
+      const productImages = JSON.parse(formData.get('productImages') as string);
+      const updatedProductImages = await updateTemporaryImages({ images: productImages });
+      return json({ updatedProductImages });
+    }
+    case 'checkTitle': {
+      const titleExist = await checkTitleExists({ title: formData.get('title') as string });
+      return json({ titleExist });
+    }
+    case 'newProduct': {
+      const fieldValues = await validator.validate(formData);
+      if (fieldValues.error) return validationError(fieldValues.error);
+      const createdProduct = await updateProduct({ product: fieldValues.data });
+      if (!createdProduct) throw new Error('Something went wrong');
+      return redirect('/admin/products?status=DRAFT');
+    }
+    default:
+      throw new Error('Something went wrong');
   }
 };
 

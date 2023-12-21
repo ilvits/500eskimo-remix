@@ -19,7 +19,15 @@ import {
 } from '~/components/ui/custom/dropdown-menu';
 import type { DropzoneOptions, FileRejection } from 'react-dropzone';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
-import { useBlocker, useFetcher, useLoaderData, useNavigate, useNavigation } from '@remix-run/react';
+import {
+  useActionData,
+  useFetcher,
+  useLoaderData,
+  useNavigate,
+  useNavigation,
+  useRevalidator,
+  useSubmit,
+} from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { AddProduct } from '~/common/productSchema';
@@ -35,12 +43,12 @@ import { Switch } from '~/components/ui/switch';
 import { TagsSelect } from '~/components/ui/custom/TagsSelect';
 import UploadedImagesGallery from '~/components/ui/custom/UploadedImagesGallery';
 import { ValidatedForm } from 'remix-validated-form';
-import type { loader } from '~/routes/admin.products.new';
 import { productSchema } from '~/common/productSchema';
 import slugify from '@sindresorhus/slugify';
 import { toBase64 } from '~/lib/utils';
 import { useDropzone } from 'react-dropzone-esm';
 import { withZod } from '@remix-validated-form/with-zod';
+import type { action, loader } from '~/routes/admin.products.new';
 
 export type productVariantsImages = {
   id: number | undefined;
@@ -52,12 +60,16 @@ const validator = withZod(productSchema);
 export default function AdminNewProductLayout() {
   const navigate = useNavigate();
   const navigation = useNavigation();
-  const fetcher = useFetcher();
+  const fetcher = useFetcher({});
+  const submit = useSubmit();
 
   const isImageUploading = fetcher.state === 'submitting' || fetcher.state === 'loading';
   const isImageSorting = fetcher.state === 'submitting' && fetcher.formData?.get('_action') === 'sortImages';
 
   const { product, tags, options, images, sorts, category } = useLoaderData<typeof loader>();
+  const data = useActionData<typeof action>();
+
+  console.log('Action data: ', data);
 
   const cropperRef = useRef<CropperRef>(null);
 
@@ -70,6 +82,7 @@ export default function AdminNewProductLayout() {
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [productImages, setProductImages] = useState<object[]>([]);
   const [productVariantsImages, setProductVariantsImages] = useState<productVariantsImages>([]);
+
   const submitingImages =
     fetcher.formData &&
     fetcher.formData.get('_action') === 'uploadImages' &&
@@ -83,9 +96,11 @@ export default function AdminNewProductLayout() {
       );
 
   const defaultValues: AddProduct = {
+    id: 0,
     sortId: 0,
     title: '',
     cover: '',
+    categorySlug: '',
     description: '',
     ingredients: '',
     conditions: '',
@@ -127,8 +142,13 @@ export default function AdminNewProductLayout() {
   //   console.log('productImages: ', productImages);
   // }, [productImages]);
 
+  // useEffect(() => {
+  //   console.log('titleExist: ', titleExist);
+  //   titleExist && setFormErrors((prevState: FormErrors) => ({ ...prevState, title: true }));
+  // }, [titleExist]);
   useEffect(() => {
-    images.length && setProductImages(images.sort((a, b) => a.order - b.order));
+    // @ts-ignore
+    images && images.length && setProductImages(images.sort((a, b) => a.order - b.order));
     console.log('images: ', images);
   }, [images]);
 
@@ -251,6 +271,7 @@ export default function AdminNewProductLayout() {
         {
           _action: 'uploadImages',
           productImages: JSON.stringify(base64Images),
+          productId: product?.id as number,
           lastIndex: productImages.length,
         },
         { method: 'post' }
@@ -298,30 +319,43 @@ export default function AdminNewProductLayout() {
   //     (productVariants.length !== 0 || productImages || cover) && currentLocation.pathname !== nextLocation.pathname
   // );
 
+  const checkTitle = (title: string) => {
+    // fetcher.submit({ _action: 'checkTitle', title }, { method: 'post' });
+    submit({ _action: 'checkTitle', title }, { method: 'post', preventScrollReset: true });
+  };
+
   return (
     <section>
       {/* <pre>{JSON.stringify(productImages, null, 2)}</pre> */}
       {/* {serverError && <pre>{JSON.stringify(serverError, null, 2)}</pre>} */}
       <h1 className='mb-8 space-x-4 text-2xl font-bold'>
         <span>Add new Product</span>
-        <span className='px-2 border rounded-lg text-secondary-500 border-secondary-500/50 '>{category?.name}</span>
+        <span className='px-2 border rounded-lg text-secondary-500 border-secondary-500/50 '>
+          {category && (category.name as string)}
+        </span>
       </h1>
       <ValidatedForm key='addProduct' method='POST' validator={validator} defaultValues={defaultValues}>
+        <input type='hidden' name='_action' value='newProduct' />
         {product && <input type='hidden' name='id' value={product.id} />}
         {category && <input type='hidden' name='categorySlug' value={category.slug} />}
         <input type='hidden' name='productStatus' value='DRAFT' />
+        {product?.coverPublicId && <input type='hidden' name='coverPublicId' value={product.coverPublicId} />}
         <input type='hidden' name='rating' value='0' />
         <input type='hidden' name='numReviews' value='0' />
         {cover && <input type='hidden' name='cover' value={cover} />}
         {/* {productImages.length > 0 &&
           productImages.map((file, i) => <input key={i} type='hidden' name='productImages' value={file} />)} */}
-        {productVariantsImages.length > 0 && (
+        {/* {productVariantsImages.length > 0 && (
           <input type='hidden' name='productVariantsImages' value={JSON.stringify(productVariantsImages)} />
-        )}
+        )} */}
         <div className='flex items-start w-full space-x-12'>
           <div className='w-3/5 space-y-8'>
             <FormSelect name='sortId' label='Sort' options={sorts} placeholder='Choose sort...' />
-            <FormInput type='text' name='title' id='title' label='Title' />
+            <FormInput type='text' name='title' id='title' label='Title' onBlur={e => checkTitle(e.target.value)} />
+            {data && 'titleExist' in data && data.titleExist && (
+              <span className='text-additional-red animate-shake'>Title already exists!</span>
+            )}
+
             <FormTextarea className='mb-4' name='description' id='description' label='Description' />
             <FormTextarea className='mb-4' name='ingredients' id='ingredients' label='Ingredients' />
             {/* Characteristics */}
@@ -408,7 +442,12 @@ export default function AdminNewProductLayout() {
                 className='disabled:cursor-not-allowed disabled:opacity-50'
                 disabled={navigation.state !== 'idle'}
                 onClick={e => {
-                  if (!cover || !productVariants.length || !productVariants.every(variant => variant.optionValueId)) {
+                  if (
+                    !cover ||
+                    !productVariants.length ||
+                    !productVariants.every(variant => variant.optionValueId) ||
+                    (data && 'titleExist' in data && data.titleExist)
+                  ) {
                     e.preventDefault();
                     !cover && setFormErrors(prev => ({ ...prev, cover: true }));
                     !productVariants.length && setFormErrors(prev => ({ ...prev, productVariants: true }));
@@ -451,7 +490,18 @@ export default function AdminNewProductLayout() {
                           formErrors.cover && '!text-additional-red animate-shake'
                         }`}
                       >
-                        {navigation.state !== 'idle' ? <div>Loading...</div> : 'Please upload an image'}
+                        <div className='flex flex-col items-center justify-center text-base'>
+                          <img className='mx-auto mb-6' src='/static/assets/icons/upload.svg' alt='' />
+                          <p className='mb-2 text-secondary-500 dark:text-secondary-500'>
+                            {isDragActive ? 'Drop it!' : 'Click to upload or drag and drop'}
+                          </p>
+                          <p className='font-semibold text-secondary-500 dark:text-secondary-500'>SVG, PNG, JPG</p>
+                          {formErrors.cover && (
+                            <p className='mt-4 text-lg font-semibold text-additional-red'>
+                              Please upload an cover image
+                            </p>
+                          )}
+                        </div>
                       </label>
                     </>
                   )}

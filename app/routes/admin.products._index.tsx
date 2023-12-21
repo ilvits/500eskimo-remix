@@ -1,16 +1,11 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
-import {
-  createTempProduct,
-  deleteProduct,
-  deleteProductImagesByStatus,
-  getProducts,
-  updateProductStatus,
-} from '~/services/products.server';
+import { createTempProduct, deleteProduct, getProducts, updateProductStatus } from '~/services/products.server';
 import { json, redirect } from '@remix-run/node';
 
 import AdminProductsLayout from '~/features/admin/AdminProductsLayout';
 import type { ProductStatus } from '@prisma/client';
 import { authenticator } from '~/auth/authenticator.server';
+import { cloudinaryDeleteImagesByStatus } from '~/services/cloudinary.server';
 
 export type FormErrors = {
   [key: string]: boolean;
@@ -58,7 +53,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   switch (_action) {
     case 'newProduct': {
       const categorySlug = formData.get('category');
-      await deleteProductImagesByStatus({ status: 'TEMPORARY' });
+      await cloudinaryDeleteImagesByStatus({ status: 'TEMPORARY' });
       await createTempProduct({ categorySlug: categorySlug as string });
       return redirect(`/admin/products/new?category=${categorySlug}`);
     }
@@ -76,7 +71,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ ok: true });
     }
     default:
-      return json({ ok: false });
+      break;
   }
 };
 

@@ -19,7 +19,7 @@ import {
 } from '~/components/ui/custom/dropdown-menu';
 import type { DropzoneOptions, FileRejection } from 'react-dropzone';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
-import { useBlocker, useLoaderData, useNavigation } from '@remix-run/react';
+import { useBlocker, useFetcher, useLoaderData, useNavigation } from '@remix-run/react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '~/components/ui/button';
@@ -65,9 +65,10 @@ export type productVariantsImages = {
 const validator = withZod(editProductSchema);
 
 export default function AdminEditProductLayout() {
-  const { tags, options, product, images, sorts } = useLoaderData<typeof loader>();
+  const { tags, options, product, images, sorts, titleExists } = useLoaderData<typeof loader>();
 
   const navigation = useNavigation();
+  const fetcher = useFetcher();
   const cropperRef = useRef<CropperRef>(null);
 
   const [cover, setCover] = useState<string | null | undefined>(undefined);
@@ -349,7 +350,14 @@ export default function AdminEditProductLayout() {
               placeholder='Choose sort...'
             />
 
-            <FormInput type='text' name='title' id='title' label='Title' />
+            <FormInput
+              type='text'
+              name='title'
+              id='title'
+              label='Title'
+              onBlur={e => fetcher.submit({ _action: 'checkTitle', title: e.target.value }, { method: 'post' })}
+            />
+            {titleExists && <p className='text-additional-red animate-shake'>Title already exists!</p>}
             <FormTextarea className='mb-4' name='description' id='description' label='Description' />
             <FormTextarea className='mb-4' name='ingredients' id='ingredients' label='Ingredients' />
 

@@ -167,7 +167,7 @@ model ProductImages {
   status           ImageStatus      @default(TEMPORARY)
   imageUrl         String
   publicId         String           @unique
-  assetId          String           @unique
+  asset_id         String           @unique
   folder           String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @default(now())
@@ -234,7 +234,7 @@ model Sorts {
   imageUrl    String?
   publicId    String?
   imageFolder String?
-  assetId     String?
+  asset_id    String?
   products    Products[]
   createdAt   DateTime   @default(now())
 }

@@ -6,9 +6,10 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   sublabel?: string;
   onChange?: (e: any) => void;
+  onBlur?: (e: any) => void;
 }
 
-export function FormInput({ name, label, sublabel, onChange, ...rest }: InputProps) {
+export function FormInput({ name, label, sublabel, onChange, onBlur, ...rest }: InputProps) {
   const { error, getInputProps } = useField(name);
   return (
     <div className={sublabel === 'id' ? 'hidden' : 'block'}>
@@ -30,6 +31,7 @@ export function FormInput({ name, label, sublabel, onChange, ...rest }: InputPro
         {...rest}
         {...getInputProps({ id: name })}
         onChange={onChange || (() => {})}
+        onBlur={onBlur || (() => {})}
       />
       {error && <p className='text-sm text-additional-red dark:text-additional-red'>{error}</p>}
     </div>

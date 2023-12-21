@@ -1,8 +1,9 @@
 import { type LoaderFunctionArgs, json } from '@remix-run/node';
 import { Form, useLoaderData } from '@remix-run/react';
 import dayjs from 'dayjs';
-import { getAllUsers } from 'tmp/services_old/account.server';
+
 import { useRootLoaderData } from '~/root';
+import { getAllUsers } from '~/services/account.server';
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const users = json(await getAllUsers());
   return users;
@@ -15,7 +16,7 @@ export default function AdminUsers() {
   console.log('currentUser: ', rootLoaderData);
 
   return (
-    <div className='w-screen h-screen flex  justify-center p-4'>
+    <div className='flex justify-center w-screen h-screen p-4'>
       <div className='w-full'>
         <h1 className='text-3xl'>Users</h1>
         <div className='flex flex-col'>
@@ -45,7 +46,7 @@ export default function AdminUsers() {
                 <div>{user.email}</div>
               </li>
               <li>
-                <div>{user.role.name}</div>
+                <div>{user.role}</div>
               </li>
               <li>
                 <div>{dayjs(user.createdAt).format('DD/MM/YYYY')}</div>
@@ -64,7 +65,7 @@ export default function AdminUsers() {
                   <button
                     className='text-red-600 disabled:opacity-50'
                     type='submit'
-                    disabled={user.role.name === 'admin' || user.id === rootLoaderData?.userId}
+                    disabled={user.role === 'ADMIN' || user.id === rootLoaderData?.userId}
                   >
                     Delete
                   </button>
